@@ -1,0 +1,31 @@
+--[[ Lua code. See documentation: https://api.tabletopsimulator.com/ --]]
+
+--[[ The onLoad event is called after the game save finishes loading. --]]
+function onLoad()
+    --[[ print('onLoad!') --]]
+    lookAtMusicPlayer()
+end
+
+--[[ The onUpdate event is called once per frame. --]]
+function onUpdate()
+    --[[ print('onUpdate loop!') --]]
+end
+
+function lookAtMusicPlayer()
+    AdvancedMusicPlayer = getObjectFromGUID("e9f6b9")
+
+    local playerList = Player.getPlayers()
+    for _, playerReference in ipairs(playerList) do
+        playerReference.lookAt({
+            position = AdvancedMusicPlayer.getPosition() - {x=-2,y=4,z=-3},
+            pitch = 70,
+            distance = 5
+        })
+    end
+end
+
+function onScriptingButtonDown(index, color)
+    if index == 1 then
+        lookAtMusicPlayer()
+    end
+end

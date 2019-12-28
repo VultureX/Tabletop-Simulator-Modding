@@ -1,0 +1,513 @@
+-- Advanced Music Player by VultureX
+
+function new(parent, object)
+    object = object or {}
+    setmetatable(object, parent)
+    parent.__index = parent -- inherit missing properties
+    return object
+end
+
+gDebug = {
+    --windowEnabled   = true,
+    log             = true,
+    text            = '',
+}
+
+gMenu = {
+    current             = nil, -- gMenu
+    items               = nil, -- {gMenuItem}
+    selectedItemIndex   = 1,
+    maxItems            = 6,
+    title               = '',
+    data                = nil, -- context dependent data
+    onConfirm           = function(this) end,
+    onShow              = function(this) end,
+    onLoad              = function(this) gMenu.initItems(this) end,
+
+    initItems = function(this)
+        for k,v in pairs(this.items) do
+            if v.isInputButton then
+                v.data = nil
+            end
+            v.inputView = gView.getInput(k)
+            v.buttonView = gView.getButton(k)
+        end
+    end,
+
+    getSelectedItem = function(this)
+        return this.items[this.selectedItemIndex]
+    end,
+    getItem = function(this, index)
+        return this.items[index]
+    end,
+
+    newPlaylists = function(nextMenu, onPlaylistClicked)
+        return new(gMenu, {onLoad=function(this)
+            -- Remove previous items except last button
+            while #this.items > 1 do
+                table.remove(this.items, 1)
+            end
+
+            -- Add playlists to items
+            for k,v in pairs(gData.playlists) do
+                local item = gMenuItem.new(v.title)
+                item.nextMenu = nextMenu
+                item.data = v
+                if onPlaylistClicked ~= nil then
+                    item.onClicked = onPlaylistClicked
+                end
+                table.insert(this.items, 1, item)
+            end
+
+            gMenu.onLoad(this)
+        end, onShow=function(this)
+            if #gData.playlists == 0 then
+                log("There are no playlists!")
+            end
+            gMenu.onShow(this)
+        end})
+    end,
+}
+
+onPlayPlaylist = function(item)
+    -- data is expected to be a gPlaylist
+    if #item.data.songs == 0 then
+        log("Playlist '" .. item.data.title .. "' is empty!")
+        return
+    end
+
+    setNextMenuData(item)
+    gMenuItem.onClicked(item)
+end
+
+onRemovePlaylist = function(item)
+    setNextMenuData(item)
+    gMenuItem.onClicked(item)
+end
+
+onEditPlaylist = function(item)
+    setNextMenuData(item)
+    gMenuItem.onClicked(item)
+end
+
+setNextMenuData = function(item)
+    if item.nextMenu ~= nil then
+        item.nextMenu.data = item.data
+    end
+end
+
+gMenus = {
+    main                = nil,
+    play                = nil,
+    playlist            = nil,
+    createPlaylist      = nil,
+    editPlaylist        = nil,
+    editPlaylistOptions = nil,
+    removePlaylist      = nil,
+    removeConfirm       = nil,
+
+    construct = function()
+        gMenus.main = new(gMenu)
+        gMenus.removeConfirm = new(gMenu)
+        gMenus.playlist = new(gMenu)
+        gMenus.createPlaylist = new(gMenu)
+        gMenus.play = gMenu.newPlaylists(nil, onPlayPlaylist)
+        gMenus.editPlaylistOptions = new(gMenu)
+        gMenus.editPlaylist =
+            gMenu.newPlaylists(gMenus.editPlaylistOptions, onEditPlaylist)
+        gMenus.removePlaylist =
+            gMenu.newPlaylists(gMenus.removeConfirm, onRemovePlaylist)
+
+        gMenus.main.title = 'Advanced Music Player'
+        gMenus.main.items = {
+            gMenuItem.new('Play', gMenus.play),
+            gMenuItem.new('Playlists', gMenus.playlist),
+            gMenuItem.new('Status'),
+            gMenuItem.new('Settings'),
+        }
+        gMenus.play.title = 'Play'
+        gMenus.play.items = {
+            gMenuItem.newBackButton(),
+        }
+        gMenus.playlist.title = 'Playlists'
+        gMenus.playlist.items = {
+            gMenuItem.new('Create', gMenus.createPlaylist),
+            gMenuItem.new('Edit', gMenus.editPlaylist),
+            gMenuItem.new('Remove', gMenus.removePlaylist),
+            gMenuItem.newBackButton(),
+        }
+        gMenus.createPlaylist.title = 'Create Playlist'
+        gMenus.createPlaylist.items = {
+            gMenuItem.newInput('Enter Name'),
+            gMenuItem.newConfirmButton(),
+            gMenuItem.newBackButton(),
+        }
+        gMenus.createPlaylist.onConfirm = function(this)
+            local inputText = this:getItem(1).data
+            if inputText ~= nil and inputText ~= '' then
+                addPlaylist(inputText)
+            else
+                log('Please enter a name!')
+            end
+        end
+        gMenus.editPlaylist.title = 'Edit playlists'
+        gMenus.editPlaylist.items = {
+            gMenuItem.newBackButton(),
+        }
+        gMenus.editPlaylistOptions.title = 'Edit playlist'
+        gMenus.editPlaylistOptions.items = {
+            gMenuItem.new('Add Song'),
+            gMenuItem.new('Edit Song'),
+            gMenuItem.new('Remove Song'),
+            gMenuItem.newBackButton(),
+        }
+        gMenus.editPlaylistOptions.onLoad = function(menu)
+            menu.title = 'Edit ' .. menu.data.title
+            gMenu.onLoad(menu)
+        end
+        gMenus.removePlaylist.title = 'Remove playlist'
+        gMenus.removePlaylist.items = {
+            gMenuItem.newBackButton(),
+        }
+        gMenus.removeConfirm.items = {
+            gMenuItem.newBackButton(),
+            gMenuItem.newConfirmButton(),
+        }
+        gMenus.removeConfirm.onLoad = function(menu)
+            menu.title = 'Remove ' .. menu.data.title .. '?'
+            gMenu.onLoad(menu)
+        end
+        gMenus.removeConfirm.onConfirm = function(menu)
+            -- data is expected to be a gPlaylist
+            local index = playlistIndexOf(menu.data.title)
+            if index > 0 then
+                log("Removing '" .. menu.data.title .. "'")
+                table.remove(gData.playlists, index)
+                goBackMenu()
+            end
+        end
+
+        gMenu.current = gMenus.main
+    end
+}
+
+gMenuItem = {
+    defaultColor    = "rgb(1,1,1)",
+    selectedColor   = "rgb(0.5,1,1)",
+    buttonView      = nil, -- gView
+    inputView       = nil, -- gView
+    data            = nil, -- context dependent data
+
+    title           = '',
+    nextMenu        = nil, -- gMenu
+    isInputButton   = false,
+    isBackButton    = false,
+    isConfirmButton = false,
+
+    onClicked = function(this)
+        if this.nextMenu == nil then
+            if not this.isInputButton then print('nextMenu is nil!') end
+            return
+        end
+
+        loadMenu(this.nextMenu)
+    end,
+
+    getView = function(this)
+        if this.isInputButton then
+            return this.inputView
+        else
+            return this.buttonView
+        end
+    end,
+
+    new = function(title, nextMenu)
+        return new(gMenuItem, {title=title, nextMenu=nextMenu})
+    end,
+    newInput = function(title, nextMenu)
+        return new(gMenuItem, {
+            title=title,
+            nextMenu=nextMenu,
+            isInputButton=true
+        })
+    end,
+    newBackButton = function()
+        return new(gMenuItem, {
+            title='Back',
+            isBackButton=true,
+            onClicked=function(this) goBackMenu() end
+        })
+    end,
+    newConfirmButton = function()
+        return new(gMenuItem, {
+            title='Confirm',
+            isConfirmButton=true,
+            onClicked=function(this) gMenu.current:onConfirm() end
+        })
+    end,
+}
+
+gMenuStack = {
+    push = function(menu)
+        table.insert(gMenuStack, 1, menu)
+    end,
+    pop = function()
+        table.remove(gMenuStack, 1)
+    end,
+}
+
+gView = {
+    getText = function(this, value)
+        return gView.get(this, "text")
+    end,
+    setText = function(this, value)
+        gView.set(this, "text", value)
+    end,
+    setPlaceholderText = function(this, value)
+        gView.set(this, "placeholder", value)
+    end,
+    setInteractable = function(this, value)
+        gView.set(this, "interactable", value)
+    end,
+    hide = function(this)
+        gView.set(this, "active", false)
+    end,
+    show = function(this, val)
+        gView.set(this, "active", gView.selectBool(val, true))
+    end,
+    setColor = function(this, color)
+        gView.set(this, "color", color)
+    end,
+    set = function(this, id, val)
+        self.UI.setAttribute(gView.select(this, this.id), id, val)
+    end,
+    get = function(this, id)
+        return self.UI.getAttribute(gView.select(this, this.id), id)
+    end,
+    reset = function(this)
+        this:hide()
+        this:setInteractable(true)
+    end,
+
+    select = function(a, b)
+        if type(a) == 'string' then return a else return b end
+    end,
+    selectBool = function(a, b)
+        if a == nil then return b else return a end
+    end,
+
+    getItem = function(index)
+        if gMenu.current:getItem(index).isInputButton then
+            return gView.getInput(index)
+        else
+            return gView.getButton(index)
+        end
+    end,
+    getButton = function(index)
+        return gView.getElement('button' .. index)
+    end,
+    getInput = function(index)
+        return gView.getElement('input' .. index)
+    end,
+    getElement = function(id)
+        -- Not very efficient, could later cache this maybe...
+        return new(gView, {id=id})
+    end,
+    id = '',
+}
+
+gPlaylist = {
+    title       = '',
+    songs       = {}, -- {gSong}
+}
+
+gSong = {
+    title       = '',
+    url         = '',
+}
+
+gData = {
+    playlists   = {}, -- {gPlaylist}
+}
+
+function playlistIndexOf(name)
+    for k,v in pairs(gData.playlists) do
+        if v.title == name then
+            return k
+        end
+    end
+    return -1
+end
+
+function existsPlaylist(name)
+    return playlistIndexOf(name) > 0
+end
+
+function addPlaylist(name)
+    if existsPlaylist(name) then
+        log("Playlist '" .. name .. "' already exists!")
+        return false
+    end
+
+    table.insert(gData.playlists, 1, gPlaylist) -- don't use new(gPlaylist)!!!
+    gData.playlists[1].title = name
+
+    log('Added playlist: ' .. name)
+    return true
+end
+
+function onLoad(userData)
+    load(userData)
+
+    gMenus.construct()
+    loadMenu(gMenus.main)
+    --loadMenu(gMenus.playlist)
+end
+
+function reload(menu)
+    gMenuStack.pop()
+    loadMenu(menu)
+end
+
+function goBackMenu()
+    gMenuStack.pop()
+    loadMenu()
+end
+
+function goHome()
+    if #gMenuStack > 1 then
+        while #gMenuStack > 1 do
+            gMenuStack.pop()
+        end
+        loadMenu()
+    end
+end
+
+function loadMenu(menu)
+    -- Push menu to stack, or load top of stack
+    if menu ~= nil then
+        gMenuStack.push(menu)
+    else
+        menu = gMenuStack[1]
+    end
+
+    menu:onLoad()
+
+    -- Update reference to selected menu
+    local oldIndex = gMenu.current.selectedItemIndex
+    gMenu.current = menu
+
+    -- Update title titleHeader
+    gView.setText('titleHeader', menu.title)
+
+    -- Reset all button views
+    for i = 1, gMenu.maxItems do
+        gView.getInput(i):reset()
+        gView.getButton(i):reset()
+    end
+
+    -- Show buttons in menu
+    for k, menuItem in pairs(menu.items) do
+        if k > gMenu.maxItems then
+            break
+        end
+
+        local view = menuItem:getView()
+        if menuItem.isInputButton then
+            view:setPlaceholderText(menuItem.title)
+            view:setText('')
+        else
+            view:setText(menuItem.title)
+        end
+
+        view:show()
+    end
+
+    menu:onShow()
+
+    -- Highlight only the selected button
+    selectButton(oldIndex, menu.selectedItemIndex)
+end
+
+function selectButton(oldIndex, newIndex)
+    gView.getButton(oldIndex):setColor(gMenuItem.defaultColor)
+    gView.getInput(oldIndex):setColor(gMenuItem.defaultColor)
+    gView.getItem(newIndex):setColor(gMenuItem.selectedColor)
+    gMenu.current.selectedItemIndex = newIndex
+end
+
+function onInput(player, value, uiElementId)
+    --log(player.steam_name .. " typed: " .. value .. " by id: " .. uiElementId)
+    gView.getElement(uiElementId):setText("")
+end
+
+function onInputEnded(player, value, uiElementId)
+    --log(player.steam_name .. " ended input: " .. value)
+end
+
+function onInputClicked(player, button, uiElementId)
+    --log(player.steam_name .. " got focus: " .. button)
+    goHome()
+end
+
+function uiIndexOf(elementId)
+    return tonumber(string.sub(elementId, string.len(elementId)))
+end
+
+function onMenuItemClicked(player, button, uiElementId)
+    local oldIndex = gMenu.current.selectedItemIndex
+    local index = uiIndexOf(uiElementId)
+
+    if gMenu.current:getItem(index).isBackButton then
+        -- Always select first button when going back
+        selectButton(oldIndex, 1)
+    else
+        selectButton(oldIndex, index)
+    end
+
+    --log('clicked: ' .. index .. ' oldItem: ' .. oldIndex)
+    local menuItem = gMenu.current.items[index]
+    menuItem:onClicked()
+end
+
+function onMenuItemInput(player, value, uiElementId)
+    local index = uiIndexOf(uiElementId)
+    gMenu.current:getItem(index).data = value
+end
+
+function load(savedData)
+    if savedData ~= '' then
+        gData = JSON.decode(savedData)
+	end
+end
+
+function onSave()
+	return JSON.encode(gData)
+end
+
+function dump(o)
+   if type(o) == 'table' then
+      local s = '{ '
+      for k,v in pairs(o) do
+         if type(k) ~= 'number' then k = '"'..k..'"' end
+         s = s .. '['..k..'] = ' .. dump(v) .. ' '
+      end
+      return s .. '} '
+   else
+      return tostring(o)
+   end
+end
+
+function log(message)
+    if not gDebug.log then
+        return
+    end
+
+    if message == nil then
+        message = 'nil'
+    end
+
+    gDebug.text = message .. '\n' .. gDebug.text
+    --gView.getElement("debugLog"):setText(gDebug.text)
+    gView.setText('debugLog', gDebug.text)
+end

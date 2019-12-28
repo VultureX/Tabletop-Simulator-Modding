@@ -1,0 +1,107 @@
+<Defaults>
+    <!-- Set the default preferredHeight for all menu item Rows -->
+    <Row class="menuItem" preferredHeight="20" />
+
+    <!-- Set the default onClick for all menu items -->
+    <Button class="menuItem" onClick="onMenuItemClicked" />
+    <InputField class="menuItem" readOnly="false" caretWidth="1" width="200"
+        height="30" onClick="onMenuItemClicked" onValueChanged="onMenuItemInput" />
+    <Panel class="menuItem" />
+</Defaults>
+
+<!-- Title header -->
+<Text id="titleHeader"
+    fontSize="16"
+    offsetXY="0 75"
+    color="White">
+    Advanced Music Player
+</Text>
+
+<!-- Menu with buttons -->
+<VerticalScrollView width="200" height="120" id="buttonMenu">
+<TableLayout width="200" height="120">
+    <!-- Row 1 -->
+    <Row class="menuItem">
+        <Cell><Panel class="menuItem">
+            <Button class="menuItem" id="button1">Playlists</Button>
+            <InputField class="menuItem" id="input1"></InputField>
+            <Text id="input1text"></Text>
+        </Panel></Cell>
+    </Row>
+    <!-- Row 2 -->
+    <Row class="menuItem">
+        <Cell><Panel class="menuItem">
+            <Button class="menuItem" id="button2"></Button>
+            <InputField class="menuItem" id="input2"></InputField>
+            <Text id="input2text"></Text>
+        </Panel></Cell>
+    </Row>
+    <!-- Row 3 -->
+    <Row class="menuItem">
+        <Cell><Panel class="menuItem">
+            <Button class="menuItem" id="button3"></Button>
+            <InputField class="menuItem" id="input3"></InputField>
+            <Text id="input3text"></Text>
+        </Panel></Cell>
+    </Row>
+    <!-- Row 4 -->
+    <Row class="menuItem">
+        <Cell><Panel class="menuItem">
+            <Button class="menuItem" id="button4"></Button>
+            <InputField class="menuItem" id="input4"></InputField>
+            <Text id="input4text"></Text>
+        </Panel></Cell>
+    </Row>
+    <!-- Row 5 -->
+    <Row class="menuItem">
+        <Cell><Panel class="menuItem">
+            <Button class="menuItem" id="button5"></Button>
+            <InputField class="menuItem" id="input5"></InputField>
+            <Text id="input5text"></Text>
+        </Panel></Cell>
+    </Row>
+    <!-- Row 6 -->
+    <Row class="menuItem">
+        <Cell><Panel class="menuItem">
+            <Button class="menuItem" id="button6"></Button>
+            <InputField class="menuItem" id="input6"></InputField>
+            <Text id="input6text"></Text>
+        </Panel></Cell>
+    </Row>
+</TableLayout>
+</VerticalScrollView>
+
+<!-- Control Window -->
+<Panel height="30" width="200" offsetXY="0 -80">
+    <InputField
+        id="mainInput"
+        placeholder="Home"
+        fontSize="14"
+        colors="White|Gray|Green|Red"
+        onValueChanged="onInput"
+        onEndEdit="onInputEnded"
+        onMouseUp="onInputClicked">
+    </InputField>
+</Panel>
+
+<!-- Debug Window -->
+<VerticalScrollView width="400" height="200" offsetXY="300 0" scrollSensitivity="10">
+<Panel padding="0 1 0 0" width="400" height="2000">
+    <InputField
+        id="debugLog"
+        placeholder="DebugWindow - Press 'Scripting 1' to reset view"
+        fontSize="12"
+        lineType="MultiLineNewLine"
+        readOnly="true">
+    </InputField>
+<!--
+    <Text
+        id="debugLog"
+        fontSize="12"
+        alignment="UpperLeft"
+        horizontalOverflow="Overflow">
+        <textcolor color="#00FF00">Green</textcolor>
+    </Text>
+-->
+</Panel>
+</VerticalScrollView>
