@@ -1,4 +1,4 @@
--- Advanced Music Player by VultureX
+-- Advanced Music Player v1.0 by VultureX
 
 function new(parent, object)
     object = object or {}
@@ -7,8 +7,12 @@ function new(parent, object)
     return object
 end
 
+function isTable(object)    return type(object) == 'table'  end
+function isNumber(object)   return type(object) == 'number' end
+function isString(object)   return type(object) == 'string' end
+function stringOr(a, b) if isString(a) then return a else return b end end
+
 gDebug = {
-    --windowEnabled   = true,
     log             = true,
     text            = '',
 }
@@ -61,13 +65,17 @@ gMenu = {
 
             gMenu.onLoad(this)
         end, onShow=function(this)
-            if #gData.playlists == 0 then
-                log("There are no playlists!")
-            end
+            checkPlaylists()
             gMenu.onShow(this)
         end})
     end,
 }
+
+checkPlaylists = function()
+    if #gData.playlists == 0 then
+        log("There are no playlists!")
+    end
+end
 
 onPlayPlaylist = function(item)
     -- data is expected to be a gPlaylist
@@ -105,13 +113,14 @@ gMenus = {
     editPlaylistOptions = nil,
     removePlaylist      = nil,
     removeConfirm       = nil,
+    default             = nil,
 
     construct = function()
         gMenus.main = new(gMenu)
         gMenus.removeConfirm = new(gMenu)
         gMenus.playlist = new(gMenu)
         gMenus.createPlaylist = new(gMenu)
-        gMenus.play = gMenu.newPlaylists(nil, onPlayPlaylist)
+        gMenus.play = new(gMenu) --gMenu.newPlaylists(nil, onPlayPlaylist)
         gMenus.editPlaylistOptions = new(gMenu)
         gMenus.editPlaylist =
             gMenu.newPlaylists(gMenus.editPlaylistOptions, onEditPlaylist)
@@ -127,8 +136,22 @@ gMenus = {
         }
         gMenus.play.title = 'Play'
         gMenus.play.items = {
+            gMenuItem.newInput('Custom playlist #...'),
+            gMenuItem.newInput('Custom playlist #...'),
+            gMenuItem.newInput('Custom playlist #...'),
+            gMenuItem.newInput('Custom playlist #...'),
+            gMenuItem.new('Play'),
             gMenuItem.newBackButton(),
         }
+        gMenus.play.onShow = function(this)
+            checkPlaylists()
+            local str = 'Playlists:\n'
+            for k , playlist in pairs(gData.playlists) do
+                str = str .. '#' .. k .. ' ' .. playlist.title .. '\n'
+            end
+            show(str)
+            gMenu.onShow(this)
+        end
         gMenus.playlist.title = 'Playlists'
         gMenus.playlist.items = {
             gMenuItem.new('Create', gMenus.createPlaylist),
@@ -157,8 +180,9 @@ gMenus = {
         gMenus.editPlaylistOptions.title = 'Edit playlist'
         gMenus.editPlaylistOptions.items = {
             gMenuItem.new('Add Song'),
-            gMenuItem.new('Edit Song'),
-            gMenuItem.new('Remove Song'),
+            gMenuItem.newInput('Edit Song #...'),
+            gMenuItem.newInput('Remove Song #...'),
+            gMenuItem.newConfirmButton(),
             gMenuItem.newBackButton(),
         }
         gMenus.editPlaylistOptions.onLoad = function(menu)
@@ -181,13 +205,13 @@ gMenus = {
             -- data is expected to be a gPlaylist
             local index = playlistIndexOf(menu.data.title)
             if index > 0 then
-                log("Removing '" .. menu.data.title .. "'")
                 table.remove(gData.playlists, index)
+                show("Removed '" .. menu.data.title .. "'")
                 goBackMenu()
             end
         end
 
-        gMenu.current = gMenus.main
+        gMenus.default = gMenus.main
     end
 }
 
@@ -257,63 +281,53 @@ gMenuStack = {
 }
 
 gView = {
-    getText = function(this, value)
-        return gView.get(this, "text")
+    id = '',
+
+    setText = function(thisOrId, value)
+        gView.set(thisOrId, "text", value)
     end,
-    setText = function(this, value)
-        gView.set(this, "text", value)
+    setPlaceholderText = function(thisOrId, value)
+        gView.set(thisOrId, "placeholder", value)
     end,
-    setPlaceholderText = function(this, value)
-        gView.set(this, "placeholder", value)
+    setInteractable = function(thisOrId, value)
+        gView.set(thisOrId, "interactable", value)
     end,
-    setInteractable = function(this, value)
-        gView.set(this, "interactable", value)
+    hide = function(thisOrId)
+        gView.set(thisOrId, "active", false)
     end,
-    hide = function(this)
-        gView.set(this, "active", false)
+    show = function(thisOrId, val)
+        gView.set(thisOrId, "active", val or true)
     end,
-    show = function(this, val)
-        gView.set(this, "active", gView.selectBool(val, true))
+    setColor = function(thisOrId, color)
+        gView.set(thisOrId, "color", color)
     end,
-    setColor = function(this, color)
-        gView.set(this, "color", color)
-    end,
-    set = function(this, id, val)
-        self.UI.setAttribute(gView.select(this, this.id), id, val)
-    end,
-    get = function(this, id)
-        return self.UI.getAttribute(gView.select(this, this.id), id)
+    set = function(thisOrId, attribute, val)
+        self.UI.setAttribute(stringOr(thisOrId, thisOrId.id), attribute, val)
     end,
     reset = function(this)
         this:hide()
         this:setInteractable(true)
     end,
 
-    select = function(a, b)
-        if type(a) == 'string' then return a else return b end
-    end,
-    selectBool = function(a, b)
-        if a == nil then return b else return a end
-    end,
-
-    getItem = function(index)
-        if gMenu.current:getItem(index).isInputButton then
-            return gView.getInput(index)
-        else
-            return gView.getButton(index)
-        end
-    end,
     getButton = function(index)
         return gView.getElement('button' .. index)
     end,
     getInput = function(index)
-        return gView.getElement('input' .. index)
+        local view = gView.getElement('input' .. index)
+        local scrollView = gView.getElement('inputScroll' .. index)
+        view.show = function(thisOrId, val)
+            gView.show(scrollView, val)
+            gView.show(thisOrId, val)
+        end
+        view.hide = function(thisOrId)
+            gView.hide(scrollView)
+            gView.hide(thisOrId)
+        end
+        return view
     end,
     getElement = function(id)
-        -- Not very efficient, could later cache this maybe...
         return new(gView, {id=id})
     end,
-    id = '',
 }
 
 gPlaylist = {
@@ -352,7 +366,7 @@ function addPlaylist(name)
     table.insert(gData.playlists, 1, gPlaylist) -- don't use new(gPlaylist)!!!
     gData.playlists[1].title = name
 
-    log('Added playlist: ' .. name)
+    show('Added: ' .. name)
     return true
 end
 
@@ -360,7 +374,7 @@ function onLoad(userData)
     load(userData)
 
     gMenus.construct()
-    loadMenu(gMenus.main)
+    loadMenu(gMenu.main)
     --loadMenu(gMenus.playlist)
 end
 
@@ -384,6 +398,12 @@ function goHome()
 end
 
 function loadMenu(menu)
+    -- Initialize default menu if there is no state
+    if #gMenuStack == 0 then
+        menu = menu or gMenus.default
+        gMenu.current = gMenu.current or menu
+    end
+
     -- Push menu to stack, or load top of stack
     if menu ~= nil then
         gMenuStack.push(menu)
@@ -432,7 +452,7 @@ end
 function selectButton(oldIndex, newIndex)
     gView.getButton(oldIndex):setColor(gMenuItem.defaultColor)
     gView.getInput(oldIndex):setColor(gMenuItem.defaultColor)
-    gView.getItem(newIndex):setColor(gMenuItem.selectedColor)
+    gMenu.current:getItem(newIndex):getView():setColor(gMenuItem.selectedColor)
     gMenu.current.selectedItemIndex = newIndex
 end
 
@@ -485,29 +505,59 @@ function onSave()
 	return JSON.encode(gData)
 end
 
-function dump(o)
-   if type(o) == 'table' then
-      local s = '{ '
-      for k,v in pairs(o) do
-         if type(k) ~= 'number' then k = '"'..k..'"' end
-         s = s .. '['..k..'] = ' .. dump(v) .. ' '
-      end
-      return s .. '} '
-   else
-      return tostring(o)
-   end
+function addTabs(str, amount)
+    for i=1,amount do
+        str = str .. '\t'
+    end
+    return str
+end
+
+function stringify(object, depth)
+    depth = depth or 1
+
+    if object == nil then
+        return 'nil'
+    end
+
+    if not isTable(object) then
+        if depth ~= 1 then
+            return '"' .. tostring(object) .. '"'
+        else
+            return tostring(object)
+        end
+    end
+
+    -- Is table object empty?
+    if next(object) == nil then
+        return '{}'
+    end
+
+    local s = '{\n'
+    for k,v in pairs(object) do
+        if isNumber(k) then k = '['..k..']' end
+        s = addTabs(s,depth) .. k ..' = ' .. stringify(v, depth+1) .. '\n'
+    end
+
+    return addTabs(s,depth-1) .. '}'
+end
+
+function clearScreen()
+    gDebug.text = ''
+end
+
+function show(message)
+    clearScreen()
+    output(message)
 end
 
 function log(message)
     if not gDebug.log then
         return
     end
+    output(message)
+end
 
-    if message == nil then
-        message = 'nil'
-    end
-
-    gDebug.text = message .. '\n' .. gDebug.text
-    --gView.getElement("debugLog"):setText(gDebug.text)
+function output(message)
+    gDebug.text = stringify(message) .. '\n' .. gDebug.text
     gView.setText('debugLog', gDebug.text)
 end

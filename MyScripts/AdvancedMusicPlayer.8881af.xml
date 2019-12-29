@@ -1,12 +1,17 @@
+<!-- Advanced Music Player v1.0 by VultureX -->
+
 <Defaults>
     <!-- Set the default preferredHeight for all menu item Rows -->
     <Row class="menuItem" preferredHeight="20" />
 
     <!-- Set the default onClick for all menu items -->
     <Button class="menuItem" onClick="onMenuItemClicked" />
-    <InputField class="menuItem" readOnly="false" caretWidth="1" width="200"
-        height="30" onClick="onMenuItemClicked" onValueChanged="onMenuItemInput" />
+    <InputField class="menuItem" width="200" height="30" offsetXY="0 5"
+        readOnly="false" caretWidth="1" onClick="onMenuItemClicked"
+        onValueChanged="onMenuItemInput" />
+    <VerticalScrollView class="menuItem" width="200" height="20" />
     <Panel class="menuItem" />
+    <Text class="menuItem" />
 </Defaults>
 
 <!-- Title header -->
@@ -24,48 +29,60 @@
     <Row class="menuItem">
         <Cell><Panel class="menuItem">
             <Button class="menuItem" id="button1">Playlists</Button>
+            <VerticalScrollView class="menuItem" id="inputScroll1">
             <InputField class="menuItem" id="input1"></InputField>
-            <Text id="input1text"></Text>
+            </VerticalScrollView>
+            <Text class="menuItem" id="input1text"></Text>
         </Panel></Cell>
     </Row>
     <!-- Row 2 -->
     <Row class="menuItem">
         <Cell><Panel class="menuItem">
             <Button class="menuItem" id="button2"></Button>
+            <VerticalScrollView class="menuItem" id="inputScroll2">
             <InputField class="menuItem" id="input2"></InputField>
-            <Text id="input2text"></Text>
+            </VerticalScrollView>
+            <Text class="menuItem" id="input2text"></Text>
         </Panel></Cell>
     </Row>
     <!-- Row 3 -->
     <Row class="menuItem">
         <Cell><Panel class="menuItem">
             <Button class="menuItem" id="button3"></Button>
+            <VerticalScrollView class="menuItem" id="inputScroll3">
             <InputField class="menuItem" id="input3"></InputField>
-            <Text id="input3text"></Text>
+            </VerticalScrollView>
+            <Text class="menuItem" id="input3text"></Text>
         </Panel></Cell>
     </Row>
     <!-- Row 4 -->
     <Row class="menuItem">
         <Cell><Panel class="menuItem">
             <Button class="menuItem" id="button4"></Button>
+            <VerticalScrollView class="menuItem" id="inputScroll4">
             <InputField class="menuItem" id="input4"></InputField>
-            <Text id="input4text"></Text>
+            </VerticalScrollView>
+            <Text class="menuItem" id="input4text"></Text>
         </Panel></Cell>
     </Row>
     <!-- Row 5 -->
     <Row class="menuItem">
         <Cell><Panel class="menuItem">
             <Button class="menuItem" id="button5"></Button>
+            <VerticalScrollView class="menuItem" id="inputScroll5">
             <InputField class="menuItem" id="input5"></InputField>
-            <Text id="input5text"></Text>
+            </VerticalScrollView>
+            <Text class="menuItem" id="input5text"></Text>
         </Panel></Cell>
     </Row>
     <!-- Row 6 -->
     <Row class="menuItem">
         <Cell><Panel class="menuItem">
             <Button class="menuItem" id="button6"></Button>
+            <VerticalScrollView class="menuItem" id="inputScroll6">
             <InputField class="menuItem" id="input6"></InputField>
-            <Text id="input6text"></Text>
+            </VerticalScrollView>
+            <Text class="menuItem" id="input6text"></Text>
         </Panel></Cell>
     </Row>
 </TableLayout>
