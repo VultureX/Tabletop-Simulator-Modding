@@ -11,6 +11,7 @@ function isTable(object)    return type(object) == 'table'  end
 function isNumber(object)   return type(object) == 'number' end
 function isString(object)   return type(object) == 'string' end
 function stringOr(a, b) if isString(a) then return a else return b end end
+function isNonEmptyString(a) return isString(a) and a ~= '' end
 
 gDebug = {
     log             = true,
@@ -77,30 +78,46 @@ checkPlaylists = function()
     end
 end
 
-onPlayPlaylist = function(item)
+showPlaylists = function()
+    local str = 'Playlists:\n'
+    for k , playlist in pairs(gData.playlists) do
+        str = str .. '#' .. k .. ' ' .. playlist.title .. '\n'
+    end
+    show(str)
+end
+
+showSongs = function(playlist)
+    local str = 'Songs of ' .. playlist.title .. ':\n'
+    for k , song in pairs(playlist.songs) do
+        str = str .. '#' .. k .. ' ' .. song.title .. ' ('
+        str = str .. song.url .. ')\n' -- todo: cap string length
+    end
+    show(str)
+end
+
+onClickPlay = function(item)
     -- data is expected to be a gPlaylist
     if #item.data.songs == 0 then
         log("Playlist '" .. item.data.title .. "' is empty!")
         return
     end
 
-    setNextMenuData(item)
+    passItemDataOnClick(item)
+end
+
+passItemDataOnClick = function(item)
+    setMenuData(item.nextMenu, item.data)
     gMenuItem.onClicked(item)
 end
 
-onRemovePlaylist = function(item)
-    setNextMenuData(item)
+passMenuDataOnClick = function(item)
+    setMenuData(item.nextMenu, gMenu.current.data)
     gMenuItem.onClicked(item)
 end
 
-onEditPlaylist = function(item)
-    setNextMenuData(item)
-    gMenuItem.onClicked(item)
-end
-
-setNextMenuData = function(item)
-    if item.nextMenu ~= nil then
-        item.nextMenu.data = item.data
+setMenuData = function(menu, data)
+    if menu ~= nil then
+        menu.data = data
     end
 end
 
@@ -111,6 +128,7 @@ gMenus = {
     createPlaylist      = nil,
     editPlaylist        = nil,
     editPlaylistOptions = nil,
+    addSong             = nil,
     removePlaylist      = nil,
     removeConfirm       = nil,
     default             = nil,
@@ -120,36 +138,33 @@ gMenus = {
         gMenus.removeConfirm = new(gMenu)
         gMenus.playlist = new(gMenu)
         gMenus.createPlaylist = new(gMenu)
-        gMenus.play = new(gMenu) --gMenu.newPlaylists(nil, onPlayPlaylist)
+        gMenus.addSong = new(gMenu)
+        gMenus.play = new(gMenu) --gMenu.newPlaylists(nil, onClickPlay)
         gMenus.editPlaylistOptions = new(gMenu)
         gMenus.editPlaylist =
-            gMenu.newPlaylists(gMenus.editPlaylistOptions, onEditPlaylist)
+            gMenu.newPlaylists(gMenus.editPlaylistOptions, passItemDataOnClick)
         gMenus.removePlaylist =
-            gMenu.newPlaylists(gMenus.removeConfirm, onRemovePlaylist)
+            gMenu.newPlaylists(gMenus.removeConfirm, passItemDataOnClick)
 
         gMenus.main.title = 'Advanced Music Player'
         gMenus.main.items = {
             gMenuItem.new('Play', gMenus.play),
             gMenuItem.new('Playlists', gMenus.playlist),
-            gMenuItem.new('Status'),
-            gMenuItem.new('Settings'),
+            --gMenuItem.new('Status'),
+            --gMenuItem.new('Settings'),
         }
         gMenus.play.title = 'Play'
         gMenus.play.items = {
-            gMenuItem.newInput('Custom playlist #...'),
-            gMenuItem.newInput('Custom playlist #...'),
-            gMenuItem.newInput('Custom playlist #...'),
-            gMenuItem.newInput('Custom playlist #...'),
+            gMenuItem.newNumericInput('Custom playlist #...'),
+            gMenuItem.newNumericInput('Custom playlist #...'),
+            gMenuItem.newNumericInput('Custom playlist #...'),
+            gMenuItem.newNumericInput('Custom playlist #...'),
             gMenuItem.new('Play'),
             gMenuItem.newBackButton(),
         }
         gMenus.play.onShow = function(this)
-            checkPlaylists()
-            local str = 'Playlists:\n'
-            for k , playlist in pairs(gData.playlists) do
-                str = str .. '#' .. k .. ' ' .. playlist.title .. '\n'
-            end
-            show(str)
+            checkPlaylists() -- Todo: will print log twice
+            showPlaylists()
             gMenu.onShow(this)
         end
         gMenus.playlist.title = 'Playlists'
@@ -166,8 +181,8 @@ gMenus = {
             gMenuItem.newBackButton(),
         }
         gMenus.createPlaylist.onConfirm = function(this)
-            local inputText = this:getItem(1).data
-            if inputText ~= nil and inputText ~= '' then
+            local inputText = this:getItem(1).data -- Todo: hard coded
+            if isNonEmptyString(inputText) then
                 addPlaylist(inputText)
             else
                 log('Please enter a name!')
@@ -177,11 +192,14 @@ gMenus = {
         gMenus.editPlaylist.items = {
             gMenuItem.newBackButton(),
         }
+
         gMenus.editPlaylistOptions.title = 'Edit playlist'
+        local addSongItem = gMenuItem.new('Add Song', gMenus.addSong)
+        addSongItem.onClicked = passMenuDataOnClick
         gMenus.editPlaylistOptions.items = {
-            gMenuItem.new('Add Song'),
-            gMenuItem.newInput('Edit Song #...'),
-            gMenuItem.newInput('Remove Song #...'),
+            addSongItem,
+            gMenuItem.newNumericInput('Edit Song #...'),
+            gMenuItem.newNumericInput('Remove Song #...'),
             gMenuItem.newConfirmButton(),
             gMenuItem.newBackButton(),
         }
@@ -189,6 +207,32 @@ gMenus = {
             menu.title = 'Edit ' .. menu.data.title
             gMenu.onLoad(menu)
         end
+        gMenus.editPlaylistOptions.onShow = function(this)
+            showSongs(this.data)
+            gMenu.onShow(this)
+        end
+
+        gMenus.addSong.title = 'Add Song to playlist'
+        gMenus.addSong.items = {
+            gMenuItem.newInput('Enter Name'),
+            gMenuItem.newInput('Enter Url'),
+            gMenuItem.newConfirmButton(),
+            gMenuItem.newBackButton(),
+        }
+        gMenus.addSong.onConfirm = function(this)
+            local nameText = this:getItem(1).data -- Todo: hard coded
+            local urlText = this:getItem(2).data
+            if isNonEmptyString(nameText) and isNonEmptyString(urlText) then
+                addSong(nameText, urlText, gMenu.current.data)
+            else
+                log('Please enter a name and url!')
+            end
+        end
+        gMenus.addSong.onLoad = function(menu)
+            menu.title = 'Add Song to ' .. menu.data.title
+            gMenu.onLoad(menu)
+        end
+
         gMenus.removePlaylist.title = 'Remove playlist'
         gMenus.removePlaylist.items = {
             gMenuItem.newBackButton(),
@@ -227,6 +271,7 @@ gMenuItem = {
     isInputButton   = false,
     isBackButton    = false,
     isConfirmButton = false,
+    isNumericInput  = false,
 
     onClicked = function(this)
         if this.nextMenu == nil then
@@ -252,8 +297,13 @@ gMenuItem = {
         return new(gMenuItem, {
             title=title,
             nextMenu=nextMenu,
-            isInputButton=true
+            isInputButton=true,
         })
+    end,
+    newNumericInput = function(title, nextMenu)
+        local item = gMenuItem.newInput(title, nextMenu)
+        item.isNumericInput=true
+        return item
     end,
     newBackButton = function()
         return new(gMenuItem, {
@@ -301,6 +351,11 @@ gView = {
     setColor = function(thisOrId, color)
         gView.set(thisOrId, "color", color)
     end,
+    setNumericInput = function(thisOrId, isNumeric)
+        local mode
+        if isNumeric then mode = "Integer" else mode = "None" end
+        gView.set(thisOrId, "characterValidation", mode)
+    end,
     set = function(thisOrId, attribute, val)
         self.UI.setAttribute(stringOr(thisOrId, thisOrId.id), attribute, val)
     end,
@@ -344,17 +399,21 @@ gData = {
     playlists   = {}, -- {gPlaylist}
 }
 
-function playlistIndexOf(name)
-    for k,v in pairs(gData.playlists) do
-        if v.title == name then
+function listIndexOf(title, list)
+    for k,v in pairs(list) do
+        if v.title == title then
             return k
         end
     end
     return -1
 end
 
-function existsPlaylist(name)
-    return playlistIndexOf(name) > 0
+function existsPlaylist(title)
+    return listIndexOf(title, gData.playlists) > 0
+end
+
+function existsSong(title, songs)
+    return listIndexOf(title, songs) > 0
 end
 
 function addPlaylist(name)
@@ -366,7 +425,22 @@ function addPlaylist(name)
     table.insert(gData.playlists, 1, gPlaylist) -- don't use new(gPlaylist)!!!
     gData.playlists[1].title = name
 
-    show('Added: ' .. name)
+    log('Added: ' .. name)
+    return true
+end
+
+function addSong(name, url, playlist)
+    if existsSong(name, playlist.songs) then
+        log("Song '" .. name .. "' already exists!")
+        return false
+    end
+
+    local newIndex = #playlist.songs + 1
+    table.insert(playlist.songs, newIndex, gSong)
+    playlist.songs[newIndex].title = name
+    playlist.songs[newIndex].url = url
+
+    log('Added: ' .. name .. '\nurl: ' .. url)
     return true
 end
 
@@ -436,6 +510,7 @@ function loadMenu(menu)
         if menuItem.isInputButton then
             view:setPlaceholderText(menuItem.title)
             view:setText('')
+            --view:setNumericInput(menuItem.isNumericInput) -- this sucks, can still input text
         else
             view:setText(menuItem.title)
         end
@@ -490,9 +565,24 @@ function onMenuItemClicked(player, button, uiElementId)
     menuItem:onClicked()
 end
 
-function onMenuItemInput(player, value, uiElementId)
+function onMenuItemInput(player, value, uiElementId) -- todo: this is really onValueChanged
     local index = uiIndexOf(uiElementId)
-    gMenu.current:getItem(index).data = value
+    local menuItem = gMenu.current:getItem(index)
+
+    if menuItem.isNumericInput then
+        local uiElement = gView.getElement(uiElementId)
+        local num = tonumber(value)
+        if num ~= nil then
+            uiElement:setPlaceholderText(menuItem.title .. value)
+        else
+            repeat
+                value = string.sub(value, 1, string.len(value) - 1)
+            until tonumber(value) ~= nil or string.len(value) == 0
+            uiElement:setText(value)
+        end
+    end
+
+    menuItem.data = value
 end
 
 function load(savedData)

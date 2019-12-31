@@ -10,6 +10,7 @@
         readOnly="false" caretWidth="1" onClick="onMenuItemClicked"
         onValueChanged="onMenuItemInput" />
     <VerticalScrollView class="menuItem" width="200" height="20" />
+    <VerticalLayout class="menuItem" width="200" height="20"/>
     <Panel class="menuItem" />
     <Text class="menuItem" />
 </Defaults>
