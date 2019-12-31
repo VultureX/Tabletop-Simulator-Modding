@@ -8,9 +8,9 @@
     <Button class="menuItem" onClick="onMenuItemClicked" />
     <InputField class="menuItem" width="200" height="30" offsetXY="0 5"
         readOnly="false" caretWidth="1" onClick="onMenuItemClicked"
-        onValueChanged="onMenuItemInput" />
-    <VerticalScrollView class="menuItem" width="200" height="20" />
-    <VerticalLayout class="menuItem" width="200" height="20"/>
+        onValueChanged="onInputItemTextChanged" />
+    <VerticalScrollView class="menuItem" width="200" height="20"
+        noScrollbars="true" scrollSensitivity="0" />
     <Panel class="menuItem" />
     <Text class="menuItem" />
 </Defaults>
