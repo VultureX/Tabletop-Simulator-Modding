@@ -32,12 +32,12 @@ gMenu = {
     onLoad              = function(this) gMenu.initItems(this) end,
 
     initItems = function(this)
-        for k,v in pairs(this.items) do
-            if v.isInputButton then
-                v.data = nil
+        for k,item in pairs(this.items) do
+            if item.isInputButton then
+                item.data = nil
             end
-            v.inputView = gView.getInput(k)
-            v.buttonView = gView.getButton(k)
+            item.inputView = gView.getInput(k)
+            item.buttonView = gView.getButton(k)
         end
     end,
 
@@ -57,16 +57,16 @@ gMenu = {
                 end
             end
 
-            -- Add playlists to items
-            for k,v in pairs(gData.playlists) do
+            -- Add items with playlists
+            for _ , playlist in pairs(gData.playlists) do
                 if #this.items >= gMenu.maxItems then
                     break
                 end
 
-                local item = gMenuItem.new(v.title)
+                local item = gMenuItem.new(playlist.title)
                 item.isPlaylistItem = true
                 item.nextMenu = nextMenu
-                item.data = v
+                item.data = playlist
                 item.onClicked = passItemDataOnClick
                 table.insert(this.items, 1, item)
             end
@@ -74,35 +74,40 @@ gMenu = {
             gMenu.onLoad(this)
         end
         me.onShow = function(this)
-            notifyNoPlaylists()
+            notify(textNoPlaylists())
             gMenu.onShow(this)
         end
     end,
 }
 
-notifyNoPlaylists = function()
-    if #gData.playlists == 0 then
-        show("There are no playlists!")
-        return true
-    end
-    return false
+function notify(message)
+    if message ~= nil then show(message) end
 end
 
-showPlaylists = function()
-    if notifyNoPlaylists() then
-        return
+textNoPlaylists = function()
+    if #gData.playlists == 0 then
+        return "There are no playlists!"
+    end
+    return nil
+end
+
+textPlaylists = function()
+    local noPlaylists = textNoPlaylists()
+    if noPlaylists ~= nil then
+        return noPlaylists
     end
 
     local str = 'Playlists:\n'
     for k , playlist in pairs(gData.playlists) do
         str = str .. '#' .. k .. ' ' .. playlist.title .. '\n'
     end
-    show(str)
+    return str
 end
 
-showSongs = function(playlist)
-    if notifyNoSongs(playlist) then
-        return
+textSongs = function(playlist)
+    local noSongs = textNoSongs(playlist)
+    if noSongs ~= nil then
+        return noSongs
     end
 
     local str = 'Songs in ' .. playlist.title .. ':\n'
@@ -110,15 +115,14 @@ showSongs = function(playlist)
         str = str .. '#' .. k .. ' ' .. song.title .. ' ('
         str = str .. song.url .. ')\n' -- todo: cap string length
     end
-    show(str)
+    return str
 end
 
-notifyNoSongs = function(playlist)
+textNoSongs = function(playlist)
     if #playlist.songs == 0 then
-        show("Playlist '" .. playlist.title .. "' is empty!")
-        return true
+        return "Playlist '" .. playlist.title .. "' is empty!"
     end
-    return false
+    return nil
 end
 
 passItemDataOnClick = function(item)
@@ -170,7 +174,7 @@ gMenus = {
             --gMenuItem.new('Settings'),
         }
         gMenus.main.onShow = function(this)
-            showPlaylists()
+            notify(textPlaylists())
             gMenu.onShow(this)
         end
         gMenus.playlist.title = 'Playlists'
@@ -216,7 +220,7 @@ gMenus = {
             gMenu.onLoad(menu)
         end
         gMenus.editPlaylistOptions.onShow = function(this)
-            showSongs(this.data)
+            notify(textSongs(this.data))
             gMenu.onShow(this)
         end
 
@@ -462,8 +466,6 @@ function onLoad(userData)
     gMenus.construct()
     loadMenu(gMenu.main)
     --loadMenu(gMenus.playlist)
-
-    --
 end
 
 function yield()
