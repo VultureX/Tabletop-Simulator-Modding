@@ -1,4 +1,4 @@
-<!-- Advanced Music Player v1.0 by VultureX -->
+<!-- Music Player Extension v1.0.0 by VultureX -->
 
 <Defaults>
     <!-- Set the default preferredHeight for all menu item Rows -->
@@ -102,12 +102,12 @@
     </InputField>
 </Panel>
 
-<!-- Debug Window -->
+<!-- Output Window -->
 <VerticalScrollView width="400" height="200" offsetXY="300 0" scrollSensitivity="10">
 <Panel padding="0 1 0 0" width="400" height="2000">
     <InputField
-        id="debugLog"
-        placeholder="DebugWindow - Press 'Scripting 1' to reset view"
+        id="outputWindow"
+        placeholder="Music Player Extension by VultureX"
         fontSize="12"
         lineType="MultiLineNewLine"
         readOnly="true">

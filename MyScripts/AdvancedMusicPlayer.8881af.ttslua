@@ -1,4 +1,4 @@
--- Advanced Music Player v1.0 by VultureX
+-- Music Player Extension v1.0.0 by VultureX
 
 function new(parent, object)
     object = object or {}
@@ -15,9 +15,27 @@ function stringOr(a, b) if isString(a) then return a else return b end end
 function isNonEmptyString(a) return isString(a) and a ~= '' end
 function isEmptyTable(a) return isTable(a) and next(a) == nil end
 
-gDebug = {
+function isLeftMouseButton(button)  return tonumber(button) == -1 end
+function isRightMouseButton(button) return tonumber(button) == -2 end
+function isScrollButton(button)     return tonumber(button) == -3 end
+
+gVersion = {
+    major   = '1',
+    minor   = '0',
+    patch   = '0',
+
+    toString = function()
+        return 'v' .. gVersion.major
+            .. '.' .. gVersion.minor
+            .. '.' .. gVersion.patch
+    end,
+}
+
+gWindow = {
+    id              = 'outputWindow',
     log             = true,
     text            = '',
+    title           = 'Music Player Extension',
 }
 
 gMenu = {
@@ -27,8 +45,11 @@ gMenu = {
     maxItems            = 6,
     title               = '',
     data                = nil, -- context dependent data
+    dataItem            = nil, -- context dependent gMenuItem
+    viewItems           = nil, -- context dependent {gMenuItem}
+    isFirstShow         = true,
     onConfirm           = function(this) end,
-    onShow              = function(this) end,
+    onShow              = function(this) this.isFirstShow = false end,
     onLoad              = function(this) gMenu.initItems(this) end,
 
     initItems = function(this)
@@ -86,12 +107,19 @@ gSongData = {
 }
 
 function notify(message)
-    if message ~= nil then show(message) end
+    if message ~= nil then log(message) end
 end
 
 textNoPlaylists = function()
     if #gData.playlists == 0 then
         return "There are no playlists!"
+    end
+    return nil
+end
+
+textOnePlaylist = function()
+    if #gData.playlists == 1 then
+        return "There is only one playlist!"
     end
     return nil
 end
@@ -140,6 +168,25 @@ passMenuDataOnClick = function(item)
     gMenuItem.onClicked(item)
 end
 
+updateDataWithPlaylist = function(dataItem, viewItems)
+    -- Update playlist index and get the title
+    local playlistTitle = nil
+    if #gData.playlists > 0 then
+        if dataItem.data > #gData.playlists then
+            dataItem.data = 1
+        end
+
+        playlistTitle = gData.playlists[dataItem.data].title
+    else
+        dataItem.data = 1
+    end
+
+    -- Update the views
+    for _ , viewItem in pairs(viewItems) do
+        viewItem:updatePlaylistText(playlistTitle)
+    end
+end
+
 setMenuData = function(menu, data)
     if menu ~= nil then
         menu.data = data
@@ -148,40 +195,16 @@ end
 
 gMenus = {
     main                = new(gMenu),
-    playlist            = new(gMenu),
+    playlists           = new(gMenu),
     createPlaylist      = new(gMenu),
     editPlaylist        = new(gMenu),
-    editPlaylistOptions = new(gMenu),
     addSong             = new(gMenu),
     removeSong          = new(gMenu),
     removePlaylist      = new(gMenu),
-    removeConfirm       = new(gMenu),
     default             = nil, -- set to one of above in gMenus.construct()
 
     construct = function()
-        gMenus.main.title = 'Advanced Music Player'
-        local loadPlaylistItem = gMenuItem.new('Load playlist')
-        loadPlaylistItem.onClicked = function(this)
-            local playlistIndex = gMenu.current:getItem(1).data -- Todo: hard coded
-            if playlistIndex ~= nil then
-                playlistIndex = tonumber(playlistIndex)
-                if playlistIndex > 0 and playlistIndex <= #gData.playlists then
-                    if(#gData.playlists[playlistIndex].songs == 0) then
-                        log(textNoSongs(gData.playlists[playlistIndex]))
-                    else
-                        gMusicPlayer.songIndex = 1
-                        gMusicPlayer.loadedPlaylist = gData.playlists[playlistIndex]
-                        gMusicPlayer.reload()
-                        --log('Loaded ' .. gData.playlists[playlistIndex].title)
-                        --gMenuItem.onClicked(this)
-                    end
-                else
-                    log('Playlist #' .. playlistIndex .. ' does not exist!')
-                end
-            else
-                log('Please enter a playlist number!')
-            end
-        end
+        gMenus.main.title = gWindow.title
         local playItem = gMenuItem.new('Play / Pause')
         playItem.onClicked = function(this)
             gMusicPlayer.play()
@@ -195,58 +218,105 @@ gMenus = {
         local nextSongItem = gMenuItem.new('Next Song')
         nextSongItem.onClicked = function(this)
             gMusicPlayer.nextSong()
+            --gMenuItem.onClicked(this)
         end
+        local action = function(item, playlistIndex)
+            if(#gData.playlists[playlistIndex].songs == 0) then
+                notify(textNoSongs(gData.playlists[playlistIndex]))
+            else
+                gMusicPlayer.songIndex = 1
+                gMusicPlayer.loadedPlaylist = gData.playlists[playlistIndex]
+                gMusicPlayer.reload()
+                --gMenuItem.onClicked(this)
+            end
+        end
+        local loadPlaylistItem
+            = gMenuItem.newPlaylistAction('Load', nil, action)
+        gMenus.main.viewItems = { loadPlaylistItem }
+        local playlistItem = gMenuItem.newPlaylistToggle(gMenus.main.viewItems)
+        gMenus.main.dataItem = playlistItem
         gMenus.main.items = {
-            gMenuItem.newNumericInput('Playlist #...'), --todo: show name, press keys for +1, +10 etc.
+            playlistItem,
             loadPlaylistItem,
+            gMenuItem.new('Playlists', gMenus.playlists),
             playItem,
             restartItem,
             nextSongItem,
             --gMenuItem.new('Favorites'),
-            gMenuItem.new('Playlists', gMenus.playlist),
-            --gMenuItem.new('Status'),
             --gMenuItem.new('Settings'),
         }
         gMenus.main.onShow = function(this)
+            local playlistItem = gMenu.current.dataItem
+            local viewItems = gMenu.current.viewItems
+            updateDataWithPlaylist(playlistItem, viewItems)
+
             clearScreen()
-            showMusicPlayerStatus()
+            if not this.isFirstShow then
+                showMusicPlayerStatus()
+            end
             gMenu.onShow(this)
         end
-        gMenus.playlist.title = 'Playlists'
-        gMenus.playlist.items = {
-            --gMenuItem.new('Favorites'),
+
+        gMenus.playlists.title = 'Playlists'
+        local editItem
+            = gMenuItem.newPlaylistAction('Edit', gMenus.editPlaylist)
+        editItem.playlistPrefix = 'Edit'
+        local removeItem
+            = gMenuItem.newPlaylistAction('Remove', gMenus.removePlaylist)
+        removeItem.playlistPrefix = 'Remove'
+        gMenus.playlists.viewItems = { editItem, removeItem }
+        local playlistItem
+            = gMenuItem.newPlaylistToggle(gMenus.playlists.viewItems)
+        gMenus.playlists.dataItem = playlistItem
+        gMenus.playlists.items = {
             gMenuItem.new('Create', gMenus.createPlaylist),
-            gMenuItem.new('Edit', gMenus.editPlaylist),
-            gMenuItem.new('Remove', gMenus.removePlaylist),
+            playlistItem,
+            editItem,
+            removeItem,
             gMenuItem.newBackButton(),
         }
+        gMenus.playlists.onShow = function(this)
+            local playlistItem = gMenu.current.dataItem
+            local viewItems = gMenu.current.viewItems
+            updateDataWithPlaylist(playlistItem, viewItems)
+            clearScreen()
+            local text = ''
+            text = textPlaylists() .. '\n'
+            for _ , playlist in pairs(gData.playlists) do
+                text = text .. textSongs(playlist) .. '\n'
+            end
+            notify(text)
+        end
+
         gMenus.createPlaylist.title = 'Create Playlist'
+        local enterNameItem = gMenuItem.newInput('Enter Name')
+        gMenus.createPlaylist.dataItem = enterNameItem
         gMenus.createPlaylist.items = {
-            gMenuItem.newInput('Enter Name'),
+            enterNameItem,
             gMenuItem.newConfirmButton(),
             gMenuItem.newBackButton(),
         }
         gMenus.createPlaylist.onConfirm = function(this)
-            local inputText = this:getItem(1).data -- Todo: hard coded
+            local inputText = this.dataItem.data
             if isNonEmptyString(inputText) then
+                clearScreen()
                 addPlaylist(inputText)
+                notify(textPlaylists())
+                --goBackMenu()
             else
                 log('Please enter a name!')
             end
         end
-        gMenus.editPlaylist.title = 'Edit playlists'
-        gMenus.editPlaylist.items = {
-            gMenuItem.newBackButton(),
-        }
-        gMenus.editPlaylist:withPlaylistItems(gMenus.editPlaylistOptions)
 
-        gMenus.editPlaylistOptions.title = 'Edit playlist'
+        gMenus.editPlaylist.title = 'Edit playlist'
         local addSongItem = gMenuItem.new('Add Song', gMenus.addSong)
         addSongItem.onClicked = passMenuDataOnClick
-        local removeSongItem = gMenuItem.new('Remove', gMenus.removeSong)
+        local enterSongItem = gMenuItem.newNumericInput('Enter Song #...')
+        gMenus.editPlaylist.dataItem = enterSongItem
+        local removeSongItem = gMenuItem.new('Remove Song', gMenus.removeSong)
         removeSongItem.onClicked = function(this)
-            -- gMenu.current.data is expected to be a gPlaylist
-            local songIndex = gMenu.current:getItem(2).data -- Todo: hard coded
+            -- data is expected to be a gPlaylist
+            local songIndex = gMenu.current.dataItem.data
             if songIndex ~= nil then
                 songIndex = tonumber(songIndex)
                 if songIndex > 0 and songIndex <= #gMenu.current.data.songs then
@@ -262,35 +332,67 @@ gMenus = {
                 log('Please enter a song number!')
             end
         end
-        gMenus.editPlaylistOptions.items = {
+        gMenus.editPlaylist.items = {
             addSongItem,
-            gMenuItem.newNumericInput('Enter Song #...'),
-            --gMenuItem.new('Edit'),
+            enterSongItem,
+            --gMenuItem.new('Edit Song'),
             removeSongItem,
             gMenuItem.newBackButton(),
         }
-        gMenus.editPlaylistOptions.onLoad = function(menu)
+        gMenus.editPlaylist.onLoad = function(menu)
+            local songIndex = gMenus.playlists.dataItem.data
+            menu.data = gData.playlists[songIndex]
             menu.title = 'Edit ' .. menu.data.title
             gMenu.onLoad(menu)
         end
-        gMenus.editPlaylistOptions.onShow = function(this)
+        gMenus.editPlaylist.onShow = function(this)
+            clearScreen()
             notify(textSongs(this.data))
             gMenu.onShow(this)
         end
 
+        gMenus.removePlaylist.items = {
+            gMenuItem.newConfirmButton(),
+            gMenuItem.newBackButton(),
+        }
+        gMenus.removePlaylist.onLoad = function(menu)
+            local songIndex = gMenus.playlists.dataItem.data
+            menu.data = gData.playlists[songIndex]
+            menu.title = 'Remove ' .. menu.data.title .. '?'
+            gMenu.onLoad(menu)
+        end
+        gMenus.removePlaylist.onConfirm = function(menu)
+            -- data is expected to be a gPlaylist
+            local index = listIndexOf(menu.data.title, gData.playlists)
+            if index > 0 then
+                table.remove(gData.playlists, index)
+                show("Removed '" .. menu.data.title .. "'")
+                goBackMenu()
+            end
+        end
+        gMenus.removePlaylist.onShow = function(this)
+            clearScreen()
+            notify(textSongs(this.data))
+            gMenu.onShow(this)
+        end
+
+        local enterNameItem = gMenuItem.newInput('Enter Name')
+        local enterUrlItem = gMenuItem.newInput('Enter Url')
+        gMenus.addSong.dataItem = { enterNameItem, enterUrlItem }
         gMenus.addSong.title = 'Add Song to playlist'
         gMenus.addSong.items = {
-            gMenuItem.newInput('Enter Name'),
-            gMenuItem.newInput('Enter Url'),
+            enterNameItem,
+            enterUrlItem,
             gMenuItem.newConfirmButton(),
             gMenuItem.newBackButton(),
         }
         gMenus.addSong.onConfirm = function(this)
-            local nameText = this:getItem(1).data -- Todo: hard coded
-            local urlText = this:getItem(2).data
+            local nameText = this.dataItem[1].data
+            local urlText = this.dataItem[2].data
             if isNonEmptyString(nameText) and isNonEmptyString(urlText) then
-                addSong(nameText, urlText, gMenu.current.data)
-                log(textSongs(gMenu.current.data))
+                clearScreen()
+                addSong(nameText, urlText, this.data)
+                notify(textSongs(this.data))
             else
                 log('Please enter a name and url!')
             end
@@ -300,35 +402,13 @@ gMenus = {
             gMenu.onLoad(menu)
         end
 
-        gMenus.removePlaylist.title = 'Remove playlist'
-        gMenus.removePlaylist.items = {
-            gMenuItem.newBackButton(),
-        }
-        gMenus.removePlaylist:withPlaylistItems(gMenus.removeConfirm)
-        gMenus.removeConfirm.items = {
-            gMenuItem.newBackButton(),
-            gMenuItem.newConfirmButton(), --Todo: move confirm button to bottom, add hidden disabled buttons
-        }
-        gMenus.removeConfirm.onLoad = function(menu)
-            menu.title = 'Remove ' .. menu.data.title .. '?'
-            gMenu.onLoad(menu)
-        end
-        gMenus.removeConfirm.onConfirm = function(menu)
-            -- data is expected to be a gPlaylist
-            local index = listIndexOf(menu.data.title, gData.playlists)
-            if index > 0 then
-                table.remove(gData.playlists, index)
-                show("Removed '" .. menu.data.title .. "'")
-                goBackMenu()
-            end
-        end
-
         gMenus.removeSong.items = {
+            gMenuItem.newConfirmButton(),
             gMenuItem.newBackButton(),
-            gMenuItem.newConfirmButton(), --Todo: move confirm button to bottom, add hidden disabled buttons
         }
         gMenus.removeSong.onLoad = function(menu)
-            menu.title = 'Remove ' .. menu.data.songs[menu.data.songIndex].title .. '?'
+            local songTitle = menu.data.songs[menu.data.songIndex].title
+            menu.title = 'Remove ' .. songTitle .. '?'
             gMenu.onLoad(menu)
         end
         gMenus.removeSong.onConfirm = function(menu)
@@ -358,6 +438,7 @@ gMenuItem = {
     isNumericInput  = false,
     isPlaylistItem  = false,
     isSongItem      = false,
+    playlistPrefix  = '',
 
     onClicked = function(this)
         if this.nextMenu == nil then
@@ -376,6 +457,14 @@ gMenuItem = {
         end
     end,
 
+    updatePlaylistText = function(this, playlistTitle)
+        if playlistTitle == nil then
+            this:getView():setText(this.title)
+        else
+            this:getView():setText(this.playlistPrefix .. ' ' .. playlistTitle)
+        end
+    end,
+
     new = function(title, nextMenu)
         return new(gMenuItem, {title=title, nextMenu=nextMenu})
     end,
@@ -389,6 +478,42 @@ gMenuItem = {
     newNumericInput = function(title, nextMenu)
         local item = gMenuItem.newInput(title, nextMenu)
         item.isNumericInput=true
+        return item
+    end,
+    newPlaylistToggle = function(viewItems)
+        local playlistItem = gMenuItem.new('Next Playlist')
+        playlistItem.data = 1
+        playlistItem.onClicked = function(this)
+            notify(textNoPlaylists())
+            notify(textOnePlaylist())
+            this.data = this.data + 1
+            updateDataWithPlaylist(this, viewItems)
+            --gMenuItem.onClicked(this)
+        end
+        return playlistItem
+    end,
+    newPlaylistAction = function(prefix, nextMenu, action)
+        if action == nil then
+            action = function(this, playlistIndex)
+                gMenuItem.onClicked(this)
+            end
+        end
+
+        local item = gMenuItem.new(prefix .. ' Playlist', nextMenu)
+        item.playlistPrefix = prefix
+        item.onClicked = function(this)
+            local playlistIndex = gMenu.current.dataItem.data
+            playlistIndex = tonumber(playlistIndex)
+            if playlistIndex > 0 and playlistIndex <= #gData.playlists then
+                action(this, playlistIndex)
+            else
+                if #gData.playlists == 0 then
+                    notify(textNoPlaylists())
+                else
+                    log('Playlist #' .. playlistIndex .. ' does not exist!')
+                end
+            end
+        end
         return item
     end,
     newBackButton = function()
@@ -513,7 +638,7 @@ function addPlaylist(name)
     -- don't use new(gPlaylist) or gPlaylist, we need a deep copy!
     table.insert(gData.playlists, 1, {})
     gData.playlists[1].title = name
-    gData.songs = {}
+    gData.playlists[1].songs = {}
 
     log('Added: ' .. name)
     return true
@@ -536,10 +661,11 @@ end
 
 function onLoad(userData)
     load(userData)
+    gView.setPlaceholderText(gWindow.id, gWindow.title .. " by VultureX - "
+        .. gVersion.toString())
 
     gMenus.construct()
     loadMenu(gMenu.main)
-    --loadMenu(gMenus.playlist)
 end
 
 function yield()
@@ -761,16 +887,16 @@ function showMusicPlayerStatus()
         status = status .. 'Loading...\n'
     end
 
-    status = status .. "Playlist '"
     if gMusicPlayer.isPlaylistLoaded() then
+        status = status .. "Playlist '"
         status = status .. gMusicPlayer.loadedPlaylist.title .. "'\n"
         status = status .. textSongPlaying(gMusicPlayer.loadedPlaylist,
             gMusicPlayer.songIndex)
     else
-        status = status .. "None'\n"
+        status = status .. "No playlist loaded\n"
     end
 
-    log(status)
+    if status != '' then log(status) end
 end
 
 function notifyNoPlaylistLoaded()
@@ -878,6 +1004,10 @@ function uiIndexOf(elementId)
 end
 
 function onMenuItemClicked(player, button, uiElementId)
+    if not isLeftMouseButton(button) then
+        return
+    end
+
     local oldIndex = gMenu.current.selectedItemIndex
     local index = uiIndexOf(uiElementId)
 
@@ -980,7 +1110,7 @@ function stringify(object, depth)
 end
 
 function clearScreen()
-    gDebug.text = ''
+    gWindow.text = ''
 end
 
 function show(message)
@@ -989,13 +1119,13 @@ function show(message)
 end
 
 function log(message)
-    if not gDebug.log then
+    if not gWindow.log then
         return
     end
     output(message)
 end
 
 function output(message)
-    gDebug.text = stringify(message) .. '\n' .. gDebug.text
-    gView.setText('debugLog', gDebug.text)
+    gWindow.text = stringify(message) .. '\n' .. gWindow.text
+    gView.setText(gWindow.id, gWindow.text)
 end
