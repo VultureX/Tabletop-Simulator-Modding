@@ -12,12 +12,12 @@ function onUpdate()
 end
 
 function lookAtMusicPlayer()
-    AdvancedMusicPlayer = getObjectFromGUID("e9f6b9")
+    AdvancedMusicPlayer = getObjectFromGUID("8881af")
 
     local playerList = Player.getPlayers()
     for _, playerReference in ipairs(playerList) do
         playerReference.lookAt({
-            position = AdvancedMusicPlayer.getPosition() - {x=-2,y=4,z=-3},
+            position = AdvancedMusicPlayer.getPosition() - {x=-3,y=4,z=-1},
             pitch = 70,
             distance = 5
         })

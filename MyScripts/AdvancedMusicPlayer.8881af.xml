@@ -15,6 +15,7 @@
     <Text class="menuItem" />
 </Defaults>
 
+<Panel offsetXY = "150 10">
 <!-- Title header -->
 <Text id="titleHeader"
     fontSize="16"
@@ -123,3 +124,4 @@
 -->
 </Panel>
 </VerticalScrollView>
+</Panel>

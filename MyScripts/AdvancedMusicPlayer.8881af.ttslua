@@ -31,6 +31,10 @@ gVersion = {
     end,
 }
 
+gDebug = {
+    log     = false,
+}
+
 gWindow = {
     id              = 'outputWindow',
     log             = true,
@@ -67,37 +71,6 @@ gMenu = {
     end,
     getItem = function(this, index)
         return this.items[index]
-    end,
-
-    withPlaylistItems = function(me, nextMenu)
-        me.onLoad = function(this)
-            -- Remove existing playlist items
-            for i=#this.items,1,-1 do
-                if this.items[i].isPlaylistItem then
-                    table.remove(this.items, i)
-                end
-            end
-
-            -- Add items with playlist titles
-            for _ , playlist in pairs(gData.playlists) do
-                if #this.items >= gMenu.maxItems then
-                    break
-                end
-
-                local item = gMenuItem.new(playlist.title)
-                item.isPlaylistItem = true
-                item.nextMenu = nextMenu
-                item.data = playlist
-                item.onClicked = passItemDataOnClick
-                table.insert(this.items, 1, item)
-            end
-
-            gMenu.onLoad(this)
-        end
-        me.onShow = function(this)
-            notify(textNoPlaylists())
-            gMenu.onShow(this)
-        end
     end,
 }
 
@@ -220,18 +193,19 @@ gMenus = {
             gMusicPlayer.nextSong()
             --gMenuItem.onClicked(this)
         end
-        local action = function(item, playlistIndex)
-            if(#gData.playlists[playlistIndex].songs == 0) then
-                notify(textNoSongs(gData.playlists[playlistIndex]))
+        local loadPlaylistAction = function(item, playlistIndex)
+            local playlist = gData.playlists[playlistIndex]
+            if(#playlist.songs == 0) then
+                notify(textNoSongs(playlist))
             else
                 gMusicPlayer.songIndex = 1
-                gMusicPlayer.loadedPlaylist = gData.playlists[playlistIndex]
+                gMusicPlayer.loadedPlaylist = playlist
                 gMusicPlayer.reload()
                 --gMenuItem.onClicked(this)
             end
         end
         local loadPlaylistItem
-            = gMenuItem.newPlaylistAction('Load', nil, action)
+            = gMenuItem.newPlaylistAction('Load', nil, loadPlaylistAction)
         gMenus.main.viewItems = { loadPlaylistItem }
         local playlistItem = gMenuItem.newPlaylistToggle(gMenus.main.viewItems)
         gMenus.main.dataItem = playlistItem
@@ -279,6 +253,8 @@ gMenus = {
             local playlistItem = gMenu.current.dataItem
             local viewItems = gMenu.current.viewItems
             updateDataWithPlaylist(playlistItem, viewItems)
+
+            -- Show playlists and songs
             clearScreen()
             local text = ''
             text = textPlaylists() .. '\n'
@@ -442,7 +418,7 @@ gMenuItem = {
 
     onClicked = function(this)
         if this.nextMenu == nil then
-            if not this.isInputButton then print('nextMenu is nil!') end
+            if not this.isInputButton then logDebug('nextMenu is nil!') end
             return
         end
 
@@ -556,8 +532,8 @@ gView = {
     hide = function(thisOrId)
         gView.set(thisOrId, "active", false)
     end,
-    show = function(thisOrId, val)
-        gView.set(thisOrId, "active", val or true)
+    show = function(thisOrId, value)
+        gView.set(thisOrId, "active", value or true)
     end,
     setColor = function(thisOrId, color)
         gView.set(thisOrId, "color", color)
@@ -593,7 +569,7 @@ gView = {
         return view
     end,
     getElement = function(id)
-        -- todo: optimize. Cache elements, put id in new table
+        -- Could optimize... Cache elements, put id in new table...
         return new(gView, {id=id})
     end,
 }
@@ -659,10 +635,14 @@ function addSong(name, url, playlist)
     return true
 end
 
-function onLoad(userData)
-    load(userData)
+function initUi()
     gView.setPlaceholderText(gWindow.id, gWindow.title .. " by VultureX - "
         .. gVersion.toString())
+end
+
+function onLoad(userData)
+    load(userData)
+    initUi()
 
     gMenus.construct()
     loadMenu(gMenu.main)
@@ -736,11 +716,9 @@ gMusicPlayer = {
     end,
 
     playCoroutine = function(args)
-        print(MusicPlayer.player_status)
+        logDebug(MusicPlayer.player_status)
         if notifyNoPlaylistLoaded() then return end
 
-        local clip = gMusicPlayer.loadedPlaylist.songs[gMusicPlayer.songIndex]
-        --MusicPlayer.setPlaylist(gMusicPlayer.loadedPlaylist.songs) -- Prevent bug with audio not working?...
         MusicPlayer.setPlaylist({}) -- Prevent bug with audio not working?...
         if gMusicPlayer.isPlaying() then
             if not MusicPlayer.pause() then
@@ -757,24 +735,23 @@ gMusicPlayer = {
                 gMusicPlayer.autoPlay = true
             end
         end
-        print(MusicPlayer.player_status)
+        logDebug(MusicPlayer.player_status)
     end,
 
     reloadAudioCoroutine = function(args)
-        print(MusicPlayer.player_status)
+        logDebug(MusicPlayer.player_status)
         if notifyNoPlaylistLoaded() then return end
 
         gMusicPlayer.setLoading(true)
         showMusicPlayerStatus()
 
+        -- Setting the current Audioclip breaks the in-game Music Player UI,
+        -- MusicPlayer.PlaylistEntry will be set to -1, and then the next /
+        -- previous buttons are broken as well as the playlist. Unfortunately
+        -- this is the only way to control which song is being played, therefore
+        -- we reset the playlist and handle loading next songs ourselves.
         local clip = gMusicPlayer.loadedPlaylist.songs[gMusicPlayer.songIndex]
         MusicPlayer.setCurrentAudioclip(clip)
-
-        -- Setting the current Audioclip breaks the Music Player,
-        -- MusicPlayer.PlaylistEntry will be set to -1, and then next/previous buttons are broken
-        -- as well as the playlist. Unfortunately this is the only way to control which song is
-        -- being played, therefore set playlist empty and handle it ourselves.
-        --MusicPlayer.setPlaylist(gMusicPlayer.loadedPlaylist.songs)
         MusicPlayer.setPlaylist({})
 
         local timeOut = 3.0
@@ -792,13 +769,13 @@ gMusicPlayer = {
 
         -- Weird behaviour where MusicPlayer will be in 'Ready' or 'Pause'
         -- state for one frame, after which it will go to 'Play'
-        print(MusicPlayer.player_status)
+        logDebug(MusicPlayer.player_status)
         if MusicPlayer.player_status == 'Pause' or
                 MusicPlayer.player_status == 'Ready' then
             --log('MusicPlayer: ' .. MusicPlayer.player_status)
             yield()
         end
-        print(MusicPlayer.player_status)
+        logDebug(MusicPlayer.player_status)
 
         gMusicPlayer.setLoading(false)
     end,
@@ -840,7 +817,7 @@ gMusicPlayer = {
 
         local currentSong = MusicPlayer.getCurrentAudioclip()
         if isEmptyTable(currentSong) then
-            log('empty table!')
+            logDebug('empty table!')
             gMusicPlayer.restart()
         else
             gCoroutine.start(gMusicPlayer.pausePlayCoroutine)
@@ -1123,6 +1100,12 @@ function log(message)
         return
     end
     output(message)
+end
+
+function logDebug(message)
+    if gDebug.log then
+        print(stringify(message))
+    end
 end
 
 function output(message)
