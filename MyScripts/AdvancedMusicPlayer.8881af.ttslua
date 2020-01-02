@@ -57,7 +57,7 @@ gMenu = {
                 end
             end
 
-            -- Add items with playlists
+            -- Add items with playlist titles
             for _ , playlist in pairs(gData.playlists) do
                 if #this.items >= gMenu.maxItems then
                     break
@@ -78,6 +78,11 @@ gMenu = {
             gMenu.onShow(this)
         end
     end,
+}
+
+gSongData = {
+    songs       = {}, -- {gSong}
+    songIndex   = 0,
 }
 
 function notify(message)
@@ -148,33 +153,63 @@ gMenus = {
     editPlaylist        = new(gMenu),
     editPlaylistOptions = new(gMenu),
     addSong             = new(gMenu),
+    removeSong          = new(gMenu),
     removePlaylist      = new(gMenu),
     removeConfirm       = new(gMenu),
     default             = nil, -- set to one of above in gMenus.construct()
 
     construct = function()
         gMenus.main.title = 'Advanced Music Player'
+        local loadPlaylistItem = gMenuItem.new('Load playlist')
+        loadPlaylistItem.onClicked = function(this)
+            local playlistIndex = gMenu.current:getItem(1).data -- Todo: hard coded
+            if playlistIndex ~= nil then
+                playlistIndex = tonumber(playlistIndex)
+                if playlistIndex > 0 and playlistIndex <= #gData.playlists then
+                    if(#gData.playlists[playlistIndex].songs == 0) then
+                        log(textNoSongs(gData.playlists[playlistIndex]))
+                    else
+                        gMusicPlayer.songIndex = 1
+                        gMusicPlayer.loadedPlaylist = gData.playlists[playlistIndex]
+                        gMusicPlayer.reload()
+                        --log('Loaded ' .. gData.playlists[playlistIndex].title)
+                        --gMenuItem.onClicked(this)
+                    end
+                else
+                    log('Playlist #' .. playlistIndex .. ' does not exist!')
+                end
+            else
+                log('Please enter a playlist number!')
+            end
+        end
         local playItem = gMenuItem.new('Play / Pause')
         playItem.onClicked = function(this)
             gMusicPlayer.play()
-            gMenuItem.onClicked(this)
+            --gMenuItem.onClicked(this)
         end
         local restartItem = gMenuItem.new('Restart Song')
         restartItem.onClicked = function(this)
             gMusicPlayer.restart()
-            gMenuItem.onClicked(this)
+            --gMenuItem.onClicked(this)
+        end
+        local nextSongItem = gMenuItem.new('Next Song')
+        nextSongItem.onClicked = function(this)
+            gMusicPlayer.nextSong()
         end
         gMenus.main.items = {
             gMenuItem.newNumericInput('Playlist #...'), --todo: show name, press keys for +1, +10 etc.
+            loadPlaylistItem,
             playItem,
             restartItem,
+            nextSongItem,
             --gMenuItem.new('Favorites'),
             gMenuItem.new('Playlists', gMenus.playlist),
             --gMenuItem.new('Status'),
             --gMenuItem.new('Settings'),
         }
         gMenus.main.onShow = function(this)
-            notify(textPlaylists())
+            clearScreen()
+            showMusicPlayerStatus()
             gMenu.onShow(this)
         end
         gMenus.playlist.title = 'Playlists'
@@ -208,11 +243,30 @@ gMenus = {
         gMenus.editPlaylistOptions.title = 'Edit playlist'
         local addSongItem = gMenuItem.new('Add Song', gMenus.addSong)
         addSongItem.onClicked = passMenuDataOnClick
+        local removeSongItem = gMenuItem.new('Remove', gMenus.removeSong)
+        removeSongItem.onClicked = function(this)
+            -- gMenu.current.data is expected to be a gPlaylist
+            local songIndex = gMenu.current:getItem(2).data -- Todo: hard coded
+            if songIndex ~= nil then
+                songIndex = tonumber(songIndex)
+                if songIndex > 0 and songIndex <= #gMenu.current.data.songs then
+                    local songData = new(gSongData)
+                    songData.songs = gMenu.current.data.songs
+                    songData.songIndex = songIndex
+                    setMenuData(this.nextMenu, songData)
+                    gMenuItem.onClicked(this)
+                else
+                    log('Song #' .. songIndex .. ' does not exist!')
+                end
+            else
+                log('Please enter a song number!')
+            end
+        end
         gMenus.editPlaylistOptions.items = {
             addSongItem,
-            gMenuItem.newNumericInput('Edit Song #...'),
-            gMenuItem.newNumericInput('Remove Song #...'),
-            gMenuItem.newConfirmButton(),
+            gMenuItem.newNumericInput('Enter Song #...'),
+            --gMenuItem.new('Edit'),
+            removeSongItem,
             gMenuItem.newBackButton(),
         }
         gMenus.editPlaylistOptions.onLoad = function(menu)
@@ -236,6 +290,7 @@ gMenus = {
             local urlText = this:getItem(2).data
             if isNonEmptyString(nameText) and isNonEmptyString(urlText) then
                 addSong(nameText, urlText, gMenu.current.data)
+                log(textSongs(gMenu.current.data))
             else
                 log('Please enter a name and url!')
             end
@@ -268,6 +323,22 @@ gMenus = {
             end
         end
 
+        gMenus.removeSong.items = {
+            gMenuItem.newBackButton(),
+            gMenuItem.newConfirmButton(), --Todo: move confirm button to bottom, add hidden disabled buttons
+        }
+        gMenus.removeSong.onLoad = function(menu)
+            menu.title = 'Remove ' .. menu.data.songs[menu.data.songIndex].title .. '?'
+            gMenu.onLoad(menu)
+        end
+        gMenus.removeSong.onConfirm = function(menu)
+            -- data is expected to be gSongData
+            local songTitle = menu.data.songs[menu.data.songIndex].title
+            table.remove(menu.data.songs, menu.data.songIndex)
+            show("Removed '" .. songTitle .. "'")
+            goBackMenu()
+        end
+
         gMenus.default = gMenus.main
     end
 }
@@ -286,6 +357,7 @@ gMenuItem = {
     isConfirmButton = false,
     isNumericInput  = false,
     isPlaylistItem  = false,
+    isSongItem      = false,
 
     onClicked = function(this)
         if this.nextMenu == nil then
@@ -438,8 +510,10 @@ function addPlaylist(name)
         return false
     end
 
-    table.insert(gData.playlists, 1, gPlaylist) -- don't use new(gPlaylist)!!!
+    -- don't use new(gPlaylist) or gPlaylist, we need a deep copy!
+    table.insert(gData.playlists, 1, {})
     gData.playlists[1].title = name
+    gData.songs = {}
 
     log('Added: ' .. name)
     return true
@@ -452,11 +526,11 @@ function addSong(name, url, playlist)
     end
 
     local newIndex = #playlist.songs + 1
-    table.insert(playlist.songs, newIndex, gSong)
+    table.insert(playlist.songs, newIndex, {})
     playlist.songs[newIndex].title = name
     playlist.songs[newIndex].url = url
 
-    log('Added: ' .. name .. '\nurl: ' .. url)
+    log('Added song: ' .. name .. '\nurl: ' .. url)
     return true
 end
 
@@ -513,29 +587,48 @@ gCoroutine = {
 gExec = gCoroutine.impl
 
 gMusicPlayer = {
-    selectedPlaylistIndex   = 0,
-    playingPlaylist         = nil, --gPlaylist
-    firstTime               = true,
-
-    song = {
-        url = 'http://chry.me/NCS_Infinity/04%20-%20Entropy.mp3',
-        title = "test",
-    },
+    songIndex               = 0,
+    loadedPlaylist          = nil, --gPlaylist
+    isLoading               = false,
+    autoPlay                = false,
 
     isPlaying = function()
         return MusicPlayer.player_status == 'Play'
     end,
 
+    setLoading = function(value)
+        gMusicPlayer.isLoading = value
+    end,
+
+    nextSong = function()
+        if notifyNoPlaylistLoaded() then return end
+        gMusicPlayer.songIndex = gMusicPlayer.songIndex + 1
+        if gMusicPlayer.songIndex > #gMusicPlayer.loadedPlaylist.songs then
+            gMusicPlayer.songIndex = 1
+        end
+        gMusicPlayer.restart()
+    end,
+
     playCoroutine = function(args)
         print(MusicPlayer.player_status)
-        MusicPlayer.setPlaylist({gMusicPlayer.song}) -- Prevent bug with audio not working?...
+        if notifyNoPlaylistLoaded() then return end
+
+        local clip = gMusicPlayer.loadedPlaylist.songs[gMusicPlayer.songIndex]
+        --MusicPlayer.setPlaylist(gMusicPlayer.loadedPlaylist.songs) -- Prevent bug with audio not working?...
+        MusicPlayer.setPlaylist({}) -- Prevent bug with audio not working?...
         if gMusicPlayer.isPlaying() then
             if not MusicPlayer.pause() then
                 log('Failed to pause MusicPlayer!')
+            else
+                gMusicPlayer.autoPlay = false
             end
         else
             if not MusicPlayer.play() then
                 log('Failed to unpause MusicPlayer!')
+                -- Try reloading audio
+                gMusicPlayer.reloadAudioCoroutine()
+            else
+                gMusicPlayer.autoPlay = true
             end
         end
         print(MusicPlayer.player_status)
@@ -543,10 +636,32 @@ gMusicPlayer = {
 
     reloadAudioCoroutine = function(args)
         print(MusicPlayer.player_status)
-        MusicPlayer.setCurrentAudioclip(gMusicPlayer.song)
-        MusicPlayer.setPlaylist({gMusicPlayer.song}) -- Prevent bug with audio not working?...
-        while MusicPlayer.loaded == false do
+        if notifyNoPlaylistLoaded() then return end
+
+        gMusicPlayer.setLoading(true)
+        showMusicPlayerStatus()
+
+        local clip = gMusicPlayer.loadedPlaylist.songs[gMusicPlayer.songIndex]
+        MusicPlayer.setCurrentAudioclip(clip)
+
+        -- Setting the current Audioclip breaks the Music Player,
+        -- MusicPlayer.PlaylistEntry will be set to -1, and then next/previous buttons are broken
+        -- as well as the playlist. Unfortunately this is the only way to control which song is
+        -- being played, therefore set playlist empty and handle it ourselves.
+        --MusicPlayer.setPlaylist(gMusicPlayer.loadedPlaylist.songs)
+        MusicPlayer.setPlaylist({})
+
+        local timeOut = 3.0
+        local passedTime = 0.0
+        while MusicPlayer.loaded == false and passedTime < timeOut do
             yield()
+            passedTime = passedTime + Time.delta_time
+        end
+
+        if not MusicPlayer.loaded and passedTime >= timeOut then
+            log('Music Player timed out')
+            gMusicPlayer.songIndex = 0
+            gMusicPlayer.loadedPlaylist = nil
         end
 
         -- Weird behaviour where MusicPlayer will be in 'Ready' or 'Pause'
@@ -554,34 +669,117 @@ gMusicPlayer = {
         print(MusicPlayer.player_status)
         if MusicPlayer.player_status == 'Pause' or
                 MusicPlayer.player_status == 'Ready' then
-            log('MusicPlayer: ' .. MusicPlayer.player_status)
+            --log('MusicPlayer: ' .. MusicPlayer.player_status)
             yield()
         end
         print(MusicPlayer.player_status)
+
+        gMusicPlayer.setLoading(false)
     end,
 
     restartCoroutine = function(args)
         gMusicPlayer.reloadAudioCoroutine()
         if not gMusicPlayer.isPlaying() then
             gMusicPlayer.playCoroutine()
+        else
+            gMusicPlayer.autoPlay = true
         end
+        showMusicPlayerStatus()
+    end,
+
+    reloadCoroutine = function(args)
+        gMusicPlayer.reloadAudioCoroutine()
+        if gMusicPlayer.isPlaying() then
+            gMusicPlayer.playCoroutine()
+        end
+        showMusicPlayerStatus()
+    end,
+
+    pausePlayCoroutine = function(args)
+        gMusicPlayer.playCoroutine()
+        showMusicPlayerStatus()
+    end,
+
+    isPlaylistLoaded = function()
+        return gMusicPlayer.loadedPlaylist ~= nil
+            and #gMusicPlayer.loadedPlaylist.songs ~= 0
+    end,
+
+    textNoPlaylistLoaded = function()
+        return "No playlist loaded!"
     end,
 
     play = function()
+        if notifyNoPlaylistLoaded() then return end
+
         local currentSong = MusicPlayer.getCurrentAudioclip()
         if isEmptyTable(currentSong) then
             log('empty table!')
             gMusicPlayer.restart()
         else
-            gCoroutine.start(gMusicPlayer.playCoroutine)
+            gCoroutine.start(gMusicPlayer.pausePlayCoroutine)
         end
     end,
 
     restart = function()
+        if notifyNoPlaylistLoaded() then return end
+
         -- MusicPlayer.skipBack() Nope: only works after 3 seconds
         gCoroutine.start(gMusicPlayer.restartCoroutine)
     end,
+
+    reload = function()
+        if notifyNoPlaylistLoaded() then return end
+        gCoroutine.start(gMusicPlayer.reloadCoroutine)
+    end,
 }
+
+textSongPlaying = function(playlist, index)
+    local noSongs = textNoSongs(playlist)
+    if noSongs ~= nil then
+        return noSongs
+    end
+
+    local str = ''
+    for k , song in ipairs(playlist.songs) do
+        if k == index then
+            if gMusicPlayer.isPlaying() then
+                str = str .. ' >'
+            else
+                str = str .. '>|'
+            end
+        end
+        str = str .. '#' .. k .. ' ' .. song.title .. ' ('
+        str = str .. song.url .. ')\n' -- todo: cap string length
+    end
+    return str
+end
+
+function showMusicPlayerStatus()
+    local status = ''
+    if gMusicPlayer.isLoading then
+        status = status .. 'Loading...\n'
+    end
+
+    status = status .. "Playlist '"
+    if gMusicPlayer.isPlaylistLoaded() then
+        status = status .. gMusicPlayer.loadedPlaylist.title .. "'\n"
+        status = status .. textSongPlaying(gMusicPlayer.loadedPlaylist,
+            gMusicPlayer.songIndex)
+    else
+        status = status .. "None'\n"
+    end
+
+    log(status)
+end
+
+function notifyNoPlaylistLoaded()
+    if not gMusicPlayer.isPlaylistLoaded() then
+        log(gMusicPlayer.textNoPlaylistLoaded())
+        return true
+    end
+    return false
+end
 
 function reload(menu)
     gMenuStack.pop()
@@ -716,7 +914,7 @@ function onInputItemTextChanged(player, value, uiElementId)
         end
     end
 
-    gMenu.current.data = value
+    menuItem.data = value
 end
 
 function load(savedData)
@@ -727,6 +925,23 @@ end
 
 function onSave()
 	return JSON.encode(gData)
+end
+
+function onChat(message, sender)
+    --log(message)
+    --log(sender)
+end
+
+function onExternalMessage(data)
+    --log(data)
+end
+
+function onUpdate()
+    if gMusicPlayer.autoPlay and not gCoroutine.isProcessing then
+        if gMusicPlayer.isPlaylistLoaded() and not gMusicPlayer.isPlaying() then
+            gMusicPlayer.nextSong()
+        end
+    end
 end
 
 function addTabs(str, amount)
