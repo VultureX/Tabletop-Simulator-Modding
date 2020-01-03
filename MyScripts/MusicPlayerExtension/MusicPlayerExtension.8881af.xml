@@ -94,7 +94,7 @@
         <Cell><Panel class="menuItem">
             <TableLayout width="200" height="20"><Row class="menuItem">
             <Cell><Button class="menubarItem" id="barButton1"
-                tooltip="Shuffle">
+                tooltip="Shuffle Playlist">
                 S
             </Button></Cell>
             <Cell><Button class="menubarItem" id="barButton2"

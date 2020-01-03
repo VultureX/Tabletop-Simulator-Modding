@@ -802,12 +802,7 @@ gMusicPlayer = {
     playSong = function(index)
         if notifyNoPlaylistLoaded() then return end
 
-        if gMusicPlayer.shuffle then
-            gMusicPlayer.shuffleSong()
-        else
-            gMusicPlayer.songIndex = index
-        end
-
+        gMusicPlayer.songIndex = index
         if gMusicPlayer.songIndex <= 0 or
             gMusicPlayer.songIndex > #gMusicPlayer.loadedPlaylist.songs then
             gMusicPlayer.songIndex = 1
@@ -815,12 +810,23 @@ gMusicPlayer = {
         gMusicPlayer.restart()
     end,
 
+    playShuffle = function(index)
+        if gMusicPlayer.shuffle then
+            index = gMusicPlayer.shuffleSong()
+        end
+        gMusicPlayer.playSong(index)
+    end,
+
     nextSong = function()
-        gMusicPlayer.playSong(gMusicPlayer.songIndex + 1)
+        gMusicPlayer.playShuffle(gMusicPlayer.songIndex + 1)
     end,
 
     previousSong = function()
-        gMusicPlayer.playSong(gMusicPlayer.songIndex - 1)
+        local index = gMusicPlayer.songIndex - 1
+        if index <= 0 then
+            index = #gMusicPlayer.loadedPlaylist.songs
+        end
+        gMusicPlayer.playShuffle(index)
     end,
 
     switchSong = function()
@@ -836,6 +842,7 @@ gMusicPlayer = {
     shuffleSong = function()
         local songIndex = gMusicPlayer.songIndex
         local disallowed = gMusicPlayer.playedSongIndices
+        local numSongs = #gMusicPlayer.loadedPlaylist.songs
 
         -- Add currently playing song if started shuffling
         if isEmptyTable(disallowed) and
@@ -843,12 +850,18 @@ gMusicPlayer = {
             table.insert(disallowed, 1, songIndex)
         end
 
-        -- Reset played indices if all songs have been played
-        local numSeen = #gMusicPlayer.playedSongIndices
-        if numSeen == #gMusicPlayer.loadedPlaylist.songs then
+        -- Reset played indices if all songs have been considered
+        local bReset = #disallowed == numSongs
+        if bReset then
             gMusicPlayer.playedSongIndices = {}
             disallowed = {}
-            print('Reset\n')
+            logDebug('Reset Shuffle')
+        end
+
+        -- Prevent current song playing twice in a row
+        bReset = bReset and numSongs ~= 1
+        if bReset then
+            table.insert(disallowed, 1, songIndex)
         end
 
         -- Find not yet played songs
@@ -863,7 +876,14 @@ gMusicPlayer = {
         local newIndex = allowed[math.random(1, #allowed)]
         table.insert(gMusicPlayer.playedSongIndices, newIndex)
         gMusicPlayer.songIndex = newIndex
-        print(newIndex)
+
+        -- Allow song that could be played twice again
+        if bReset then
+            table.remove(disallowed, 1)
+        end
+
+        logDebug('Shuffle: ' .. newIndex)
+        return gMusicPlayer.songIndex
     end,
 
     playCoroutine = function(args)
