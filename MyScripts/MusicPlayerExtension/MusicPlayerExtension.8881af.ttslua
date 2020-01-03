@@ -391,12 +391,10 @@ gMenus = {
         nextButton.onClicked    = onNextSongClicked
         previousButton.onClicked = onPreviousSongClicked
         loopButton.onClicked = function(this)
-            gMusicPlayer.loopSong = not gMusicPlayer.loopSong
-            highlightButton(this, gMusicPlayer.loopSong)
+            gMusicPlayer.toggleLooping()
         end
         shuffleButton.onClicked = function(this)
-            gMusicPlayer.shuffle = not gMusicPlayer.shuffle
-            highlightButton(this, gMusicPlayer.shuffle)
+            gMusicPlayer.toggleShuffle()
         end
 
         gMenus.menuBar.items = {
@@ -409,6 +407,9 @@ gMenus = {
             loopButton,
         }
         gMenus.menuBar:initItems()
+
+        gMusicPlayer.loopButton = loopButton
+        gMusicPlayer.shuffleButton = shuffleButton
 
         gMenus.default = gMenus.main
     end
@@ -618,6 +619,9 @@ gData = {
     -- v1.1.0
     lastPlaylistIndex   = 0,
     lastSongIndex       = 0,
+    -- v1.2.0
+    wasLooping          = false,
+    wasShuffle          = false,
 }
 
 function containsNumber(list, number)
@@ -748,6 +752,8 @@ gMusicPlayer = {
     loopSong                = false,
     shuffle                 = false,
     playedSongIndices       = {}, -- indices of songs played by shuffle
+    loopButton              = nil, -- gMenuItem
+    shuffleButton           = nil, -- gMenuItem
 
     isPlaying = function()
         return MusicPlayer.player_status == 'Play'
@@ -755,6 +761,29 @@ gMusicPlayer = {
 
     setLoading = function(value)
         gMusicPlayer.isLoading = value
+    end,
+
+    toggleLooping = function()
+        gMusicPlayer.setLooping(not gMusicPlayer.loopSong)
+    end,
+
+    setLooping = function(isLooping)
+        gMusicPlayer.loopSong = isLooping
+        gMusicPlayer:updateUi()
+    end,
+
+    toggleShuffle = function()
+        gMusicPlayer.setShuffle(not gMusicPlayer.shuffle)
+    end,
+
+    setShuffle = function(isShuffle)
+        gMusicPlayer.shuffle = isShuffle
+        gMusicPlayer:updateUi()
+    end,
+
+    updateUi = function(this)
+        highlightButton(this.loopButton, this.loopSong)
+        highlightButton(this.shuffleButton, this.shuffle)
     end,
 
     reset = function(this)
@@ -765,6 +794,8 @@ gMusicPlayer = {
 
     load = function(this)
         this:loadPlaylist(gData.lastPlaylistIndex, gData.lastSongIndex)
+        this.setLooping(gData.wasLooping)
+        this.setShuffle(gData.wasShuffle)
     end,
 
     save = function(this)
@@ -776,6 +807,8 @@ gMusicPlayer = {
             gData.lastPlaylistIndex = 0
             gData.lasSongIndex = 0
         end
+        gData.wasLooping = this.loopSong
+        gData.wasShuffle = this.shuffle
     end,
 
     loadPlaylist = function(this, index, songIndex)
