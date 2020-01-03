@@ -64,6 +64,7 @@ gMenu = {
             end
             item.inputView = gView.getInput(k)
             item.buttonView = gView.getButton(k)
+            item.barView = gView.getBarButton(k)
         end
     end,
 
@@ -379,16 +380,20 @@ gMenus = {
             goBackMenu()
         end
 
-        local shuffleButton     = new(gMenuItem)
-        local restartButton     = new(gMenuItem)
-        local previousButton    = new(gMenuItem)
-        local nextButton        = new(gMenuItem)
-        local playButton        = new(gMenuItem)
-        local loopButton        = new(gMenuItem)
+        local shuffleButton     = gMenuItem.newBarButton()
+        local restartButton     = gMenuItem.newBarButton()
+        local previousButton    = gMenuItem.newBarButton()
+        local nextButton        = gMenuItem.newBarButton()
+        local playButton        = gMenuItem.newBarButton()
+        local loopButton        = gMenuItem.newBarButton()
         playButton.onClicked    = onPlayClicked
         restartButton.onClicked = onRestartClicked
         nextButton.onClicked    = onNextSongClicked
         previousButton.onClicked = onPreviousSongClicked
+        loopButton.onClicked = function(this)
+            gMusicPlayer.loopSong = not gMusicPlayer.loopSong
+            highlightButton(this, gMusicPlayer.loopSong)
+        end
 
         gMenus.menuBar.items = {
             shuffleButton,
@@ -399,6 +404,7 @@ gMenus = {
             restartButton,
             loopButton,
         }
+        gMenus.menuBar:initItems()
 
         gMenus.default = gMenus.main
     end
@@ -407,12 +413,15 @@ gMenus = {
 gMenuItem = {
     defaultColor    = "rgb(1,1,1)",
     selectedColor   = "rgb(0.5,1,1)",
+    highlightColor  = "rgb(0.5,1,1)",
+    barView         = nil,
     buttonView      = nil, -- gView
     inputView       = nil, -- gView
     data            = nil, -- context dependent data
 
     title           = '',
     nextMenu        = nil, -- gMenu
+    isBarButton     = false,
     isInputButton   = false,
     isBackButton    = false,
     isConfirmButton = false,
@@ -433,6 +442,8 @@ gMenuItem = {
     getView = function(this)
         if this.isInputButton then
             return this.inputView
+        elseif this.isBarButton then
+            return this.barView
         else
             return this.buttonView
         end
@@ -509,6 +520,11 @@ gMenuItem = {
             title='Confirm',
             isConfirmButton=true,
             onClicked=function(this) gMenu.current:onConfirm() end
+        })
+    end,
+    newBarButton = function()
+        return new(gMenuItem, {
+            isBarButton = true,
         })
     end,
 }
@@ -711,6 +727,7 @@ gMusicPlayer = {
     loadedPlaylist          = nil, --gPlaylist
     isLoading               = false,
     autoPlay                = false,
+    loopSong                = false,
 
     isPlaying = function()
         return MusicPlayer.player_status == 'Play'
@@ -776,6 +793,15 @@ gMusicPlayer = {
 
     previousSong = function()
         gMusicPlayer.playSong(gMusicPlayer.songIndex - 1)
+    end,
+
+    switchSong = function()
+        if gMusicPlayer.loopSong then
+            gMusicPlayer.playSong(gMusicPlayer.songIndex)
+            return
+        end
+
+        gMusicPlayer.nextSong()
     end,
 
     playCoroutine = function(args)
@@ -1024,6 +1050,12 @@ function selectButton(oldIndex, newIndex)
     gMenu.current.selectedItemIndex = newIndex
 end
 
+function highlightButton(button, shouldHighlight)
+    local color
+        = choose(shouldHighlight, button.highlightColor, button.defaultColor)
+    button:getView():setColor(color)
+end
+
 function onInput(player, value, uiElementId)
     --log(player.steam_name .. " typed: " .. value .. " by id: " .. uiElementId)
     gView.getElement(uiElementId):setText("")
@@ -1113,7 +1145,7 @@ end
 function onUpdate()
     if gMusicPlayer.autoPlay and not gCoroutine.isProcessing then
         if gMusicPlayer.isPlaylistLoaded() and not gMusicPlayer.isPlaying() then
-            gMusicPlayer.nextSong()
+            gMusicPlayer.switchSong()
         end
     end
 end
