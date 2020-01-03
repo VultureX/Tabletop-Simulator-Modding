@@ -394,6 +394,10 @@ gMenus = {
             gMusicPlayer.loopSong = not gMusicPlayer.loopSong
             highlightButton(this, gMusicPlayer.loopSong)
         end
+        shuffleButton.onClicked = function(this)
+            gMusicPlayer.shuffle = not gMusicPlayer.shuffle
+            highlightButton(this, gMusicPlayer.shuffle)
+        end
 
         gMenus.menuBar.items = {
             shuffleButton,
@@ -616,6 +620,18 @@ gData = {
     lastSongIndex       = 0,
 }
 
+function containsNumber(list, number)
+    number = tonumber(number)
+    if number == nil then return false end
+
+    for _ , v in pairs(list) do
+        if v == number then
+            return true
+        end
+    end
+    return false
+end
+
 function listIndexOf(title, list)
     for k,v in pairs(list) do
         if v.title == title then
@@ -669,6 +685,8 @@ function initUi()
 end
 
 function onLoad(userData)
+    math.randomseed(Time.time)
+
     load(userData)
     initUi()
 
@@ -728,6 +746,8 @@ gMusicPlayer = {
     isLoading               = false,
     autoPlay                = false,
     loopSong                = false,
+    shuffle                 = false,
+    playedSongIndices       = {}, -- indices of songs played by shuffle
 
     isPlaying = function()
         return MusicPlayer.player_status == 'Play'
@@ -740,6 +760,7 @@ gMusicPlayer = {
     reset = function(this)
         this.songIndex = 0
         this.loadedPlaylist = nil
+        gMusicPlayer.playedSongIndices = {}
     end,
 
     load = function(this)
@@ -773,13 +794,20 @@ gMusicPlayer = {
                 this.songIndex = songIndex
             end
             this.loadedPlaylist = playlist
+            gMusicPlayer.playedSongIndices = {}
             this.reload()
         end
     end,
 
     playSong = function(index)
         if notifyNoPlaylistLoaded() then return end
-        gMusicPlayer.songIndex = index
+
+        if gMusicPlayer.shuffle then
+            gMusicPlayer.shuffleSong()
+        else
+            gMusicPlayer.songIndex = index
+        end
+
         if gMusicPlayer.songIndex <= 0 or
             gMusicPlayer.songIndex > #gMusicPlayer.loadedPlaylist.songs then
             gMusicPlayer.songIndex = 1
@@ -796,12 +824,46 @@ gMusicPlayer = {
     end,
 
     switchSong = function()
+        if notifyNoPlaylistLoaded() then return end
+
         if gMusicPlayer.loopSong then
             gMusicPlayer.playSong(gMusicPlayer.songIndex)
-            return
+        else
+            gMusicPlayer.nextSong()
+        end
+    end,
+
+    shuffleSong = function()
+        local songIndex = gMusicPlayer.songIndex
+        local disallowed = gMusicPlayer.playedSongIndices
+
+        -- Add currently playing song if started shuffling
+        if isEmptyTable(disallowed) and
+            not containsNumber(disallowed, songIndex) then
+            table.insert(disallowed, 1, songIndex)
         end
 
-        gMusicPlayer.nextSong()
+        -- Reset played indices if all songs have been played
+        local numSeen = #gMusicPlayer.playedSongIndices
+        if numSeen == #gMusicPlayer.loadedPlaylist.songs then
+            gMusicPlayer.playedSongIndices = {}
+            disallowed = {}
+            print('Reset\n')
+        end
+
+        -- Find not yet played songs
+        local allowed = {}
+        for index=1, #gMusicPlayer.loadedPlaylist.songs do
+            if not containsNumber(disallowed, index) then
+                table.insert(allowed, index)
+            end
+        end
+
+        -- Pick random index
+        local newIndex = allowed[math.random(1, #allowed)]
+        table.insert(gMusicPlayer.playedSongIndices, newIndex)
+        gMusicPlayer.songIndex = newIndex
+        print(newIndex)
     end,
 
     playCoroutine = function(args)
