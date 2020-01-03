@@ -194,15 +194,7 @@ gMenus = {
             --gMenuItem.onClicked(this)
         end
         local loadPlaylistAction = function(item, playlistIndex)
-            local playlist = gData.playlists[playlistIndex]
-            if(#playlist.songs == 0) then
-                notify(textNoSongs(playlist))
-            else
-                gMusicPlayer.songIndex = 1
-                gMusicPlayer.loadedPlaylist = playlist
-                gMusicPlayer.reload()
-                --gMenuItem.onClicked(this)
-            end
+            gMusicPlayer:loadPlaylist(playlistIndex)
         end
         local loadPlaylistItem
             = gMenuItem.newPlaylistAction('Load', nil, loadPlaylistAction)
@@ -585,7 +577,11 @@ gSong = {
 }
 
 gData = {
-    playlists   = {}, -- {gPlaylist}
+    -- v1.0.0
+    playlists           = {}, -- {gPlaylist}
+    -- v1.1.0
+    lastPlaylistIndex   = 0,
+    lastSongIndex       = 0,
 }
 
 function listIndexOf(title, list)
@@ -641,11 +637,15 @@ function initUi()
 end
 
 function onLoad(userData)
+    --local tablet = spawnObject('Tablet')
+
     load(userData)
     initUi()
 
     gMenus.construct()
     loadMenu(gMenu.main)
+
+    gMusicPlayer:load()
 end
 
 function yield()
@@ -706,6 +706,46 @@ gMusicPlayer = {
         gMusicPlayer.isLoading = value
     end,
 
+    reset = function(this)
+        this.songIndex = 0
+        this.loadedPlaylist = nil
+    end,
+
+    load = function(this)
+        this:loadPlaylist(gData.lastPlaylistIndex, gData.lastSongIndex)
+    end,
+
+    save = function(this)
+        if this.isPlaylistLoaded() then
+            gData.lastPlaylistIndex
+                = listIndexOf(this.loadedPlaylist.title, gData.playlists)
+            gData.lastSongIndex = this.songIndex
+        else
+            gData.lastPlaylistIndex = 0
+            gData.lasSongIndex = 0
+        end
+    end,
+
+    loadPlaylist = function(this, index, songIndex)
+        if index <= 0 or index > #gData.playlists then
+            logDebug("Can't load playlist #" .. index)
+            return
+        end
+
+        local playlist = gData.playlists[index]
+        if #playlist.songs == 0 then
+            notify(textNoSongs(playlist))
+        else
+            this.songIndex = 1
+            if songIndex ~= nil and songIndex > 0
+                and songIndex <= #playlist.songs then
+                this.songIndex = songIndex
+            end
+            this.loadedPlaylist = playlist
+            this.reload()
+        end
+    end,
+
     nextSong = function()
         if notifyNoPlaylistLoaded() then return end
         gMusicPlayer.songIndex = gMusicPlayer.songIndex + 1
@@ -763,8 +803,7 @@ gMusicPlayer = {
 
         if not MusicPlayer.loaded and passedTime >= timeOut then
             log('Music Player timed out')
-            gMusicPlayer.songIndex = 0
-            gMusicPlayer.loadedPlaylist = nil
+            gMusicPlayer:reset()
         end
 
         -- Weird behaviour where MusicPlayer will be in 'Ready' or 'Pause'
@@ -1026,11 +1065,12 @@ end
 
 function load(savedData)
     if savedData ~= '' then
-        gData = JSON.decode(savedData)
+        gData = new(gData, JSON.decode(savedData))
 	end
 end
 
 function onSave()
+    gMusicPlayer:save()
 	return JSON.encode(gData)
 end
 
