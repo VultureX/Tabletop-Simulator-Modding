@@ -170,6 +170,7 @@ end
 onPlayClicked       = function(item) gMusicPlayer.play() end
 onRestartClicked    = function(item) gMusicPlayer.restart() end
 onNextSongClicked   = function(item) gMusicPlayer.nextSong() end
+onPreviousSongClicked = function(item) gMusicPlayer.previousSong() end
 
 gMenus = {
     main                = new(gMenu),
@@ -387,6 +388,7 @@ gMenus = {
         playButton.onClicked    = onPlayClicked
         restartButton.onClicked = onRestartClicked
         nextButton.onClicked    = onNextSongClicked
+        previousButton.onClicked = onPreviousSongClicked
 
         gMenus.menuBar.items = {
             shuffleButton,
@@ -758,13 +760,22 @@ gMusicPlayer = {
         end
     end,
 
-    nextSong = function()
+    playSong = function(index)
         if notifyNoPlaylistLoaded() then return end
-        gMusicPlayer.songIndex = gMusicPlayer.songIndex + 1
-        if gMusicPlayer.songIndex > #gMusicPlayer.loadedPlaylist.songs then
+        gMusicPlayer.songIndex = index
+        if gMusicPlayer.songIndex <= 0 or
+            gMusicPlayer.songIndex > #gMusicPlayer.loadedPlaylist.songs then
             gMusicPlayer.songIndex = 1
         end
         gMusicPlayer.restart()
+    end,
+
+    nextSong = function()
+        gMusicPlayer.playSong(gMusicPlayer.songIndex + 1)
+    end,
+
+    previousSong = function()
+        gMusicPlayer.playSong(gMusicPlayer.songIndex - 1)
     end,
 
     playCoroutine = function(args)
