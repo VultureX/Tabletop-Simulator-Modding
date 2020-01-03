@@ -1,4 +1,4 @@
-<!-- Music Player Extension v1.0.0 by VultureX -->
+<!-- Music Player Extension v1.1.0 by VultureX -->
 
 <Defaults>
     <!-- Set the default preferredHeight for all menu item Rows -->
@@ -6,26 +6,28 @@
 
     <!-- Set the default onClick for all menu items -->
     <Button class="menuItem" onClick="onMenuItemClicked" />
+    <Button class="menubarItem" onClick="onMenubarItemClicked" />
     <InputField class="menuItem" width="200" height="30" offsetXY="0 5"
         readOnly="false" caretWidth="1" onClick="onMenuItemClicked"
         onValueChanged="onInputItemTextChanged" />
     <VerticalScrollView class="menuItem" width="200" height="20"
         noScrollbars="true" scrollSensitivity="0" />
     <Panel class="menuItem" />
-    <Text class="menuItem" />
+    <Text class="menuItem"/>
 </Defaults>
 
+<!-- Shell to move the whole UI around easily -->
 <Panel offsetXY = "150 10">
 <!-- Title header -->
 <Text id="titleHeader"
     fontSize="16"
-    offsetXY="0 75"
+    offsetXY="0 82"
     color="White">
     Advanced Music Player
 </Text>
 
 <!-- Menu with buttons -->
-<VerticalScrollView width="200" height="120" id="buttonMenu">
+<VerticalScrollView class="menuItem" height="140" id="buttonMenu">
 <TableLayout width="200" height="120">
     <!-- Row 1 -->
     <Row class="menuItem">
@@ -87,13 +89,52 @@
             <Text class="menuItem" id="input6text"></Text>
         </Panel></Cell>
     </Row>
+    <!-- Row 7 -->
+    <Row class="menuItem">
+        <Cell><Panel class="menuItem">
+            <TableLayout width="200" height="20"><Row class="menuItem">
+            <Cell><Button class="menubarItem" id="barButton1"
+                tooltip="Shuffle">
+                S
+            </Button></Cell>
+            <Cell><Button class="menubarItem" id="barButton2"
+                tooltip="Restart Song">
+                .
+            </Button></Cell>
+            <Cell><Button class="menubarItem" id="barButton3"
+                tooltip="Previous Song">
+                &#60;
+            </Button></Cell>
+            <Cell><Button class="menubarItem" id="barButton4"
+                tooltip="Play / Pause">
+                P
+            </Button></Cell>
+            <Cell><Button class="menubarItem" id="barButton5"
+                tooltip="Next Song">
+                &#62;
+            </Button></Cell>
+            <Cell><Button class="menubarItem" id="barButton6"
+                tooltip="Restart Song">
+                .
+            </Button></Cell>
+            <Cell><Button class="menubarItem" id="barButton7"
+                tooltip="Loop Song">
+                L
+            </Button></Cell>
+            </Row></TableLayout>
+        </Panel></Cell>
+    </Row>
 </TableLayout>
 </VerticalScrollView>
 
 <!-- Control Window -->
-<Panel height="30" width="200" offsetXY="0 -80">
+<Panel offsetXY="0 -85">
+    <VerticalScrollView class="menuItem" width="60" height="30">
     <InputField
         id="mainInput"
+        height="40"
+        width="60"
+        offsetXY="0 0"
         placeholder="Home"
         fontSize="14"
         colors="White|Gray|Green|Red"
@@ -101,6 +142,7 @@
         onEndEdit="onInputEnded"
         onMouseUp="onInputClicked">
     </InputField>
+    </VerticalScrollView>
 </Panel>
 
 <!-- Output Window -->
@@ -124,4 +166,4 @@
 -->
 </Panel>
 </VerticalScrollView>
-</Panel>
+</Panel> <!-- Shell -->

@@ -1,4 +1,4 @@
--- Music Player Extension v1.0.0 by VultureX
+-- Music Player Extension v1.1.0 by VultureX
 
 function new(parent, object)
     object = object or {}
@@ -11,6 +11,7 @@ function isTable(object)    return type(object) == 'table'  end
 function isNumber(object)   return type(object) == 'number' end
 function isString(object)   return type(object) == 'string' end
 function isFunction(object) return type(object) == 'function' end
+function choose(bool, a, b) if bool then return a else return b end end
 function stringOr(a, b) if isString(a) then return a else return b end end
 function isNonEmptyString(a) return isString(a) and a ~= '' end
 function isEmptyTable(a) return isTable(a) and next(a) == nil end
@@ -21,7 +22,7 @@ function isScrollButton(button)     return tonumber(button) == -3 end
 
 gVersion = {
     major   = '1',
-    minor   = '0',
+    minor   = '1',
     patch   = '0',
 
     toString = function()
@@ -166,6 +167,10 @@ setMenuData = function(menu, data)
     end
 end
 
+onPlayClicked       = function(item) gMusicPlayer.play() end
+onRestartClicked    = function(item) gMusicPlayer.restart() end
+onNextSongClicked   = function(item) gMusicPlayer.nextSong() end
+
 gMenus = {
     main                = new(gMenu),
     playlists           = new(gMenu),
@@ -174,25 +179,13 @@ gMenus = {
     addSong             = new(gMenu),
     removeSong          = new(gMenu),
     removePlaylist      = new(gMenu),
+    menuBar             = new(gMenu),
     default             = nil, -- set to one of above in gMenus.construct()
 
     construct = function()
         gMenus.main.title = gWindow.title
         local playItem = gMenuItem.new('Play / Pause')
-        playItem.onClicked = function(this)
-            gMusicPlayer.play()
-            --gMenuItem.onClicked(this)
-        end
-        local restartItem = gMenuItem.new('Restart Song')
-        restartItem.onClicked = function(this)
-            gMusicPlayer.restart()
-            --gMenuItem.onClicked(this)
-        end
-        local nextSongItem = gMenuItem.new('Next Song')
-        nextSongItem.onClicked = function(this)
-            gMusicPlayer.nextSong()
-            --gMenuItem.onClicked(this)
-        end
+        playItem.onClicked = onPlayClicked
         local loadPlaylistAction = function(item, playlistIndex)
             gMusicPlayer:loadPlaylist(playlistIndex)
         end
@@ -206,8 +199,6 @@ gMenus = {
             loadPlaylistItem,
             gMenuItem.new('Playlists', gMenus.playlists),
             playItem,
-            restartItem,
-            nextSongItem,
             --gMenuItem.new('Favorites'),
             --gMenuItem.new('Settings'),
         }
@@ -387,6 +378,26 @@ gMenus = {
             goBackMenu()
         end
 
+        local shuffleButton     = new(gMenuItem)
+        local restartButton     = new(gMenuItem)
+        local previousButton    = new(gMenuItem)
+        local nextButton        = new(gMenuItem)
+        local playButton        = new(gMenuItem)
+        local loopButton        = new(gMenuItem)
+        playButton.onClicked    = onPlayClicked
+        restartButton.onClicked = onRestartClicked
+        nextButton.onClicked    = onNextSongClicked
+
+        gMenus.menuBar.items = {
+            shuffleButton,
+            restartButton,
+            previousButton,
+            playButton,
+            nextButton,
+            restartButton,
+            loopButton,
+        }
+
         gMenus.default = gMenus.main
     end
 }
@@ -560,6 +571,9 @@ gView = {
         end
         return view
     end,
+    getBarButton = function(index)
+        return gView.getElement('barButton' .. index)
+    end,
     getElement = function(id)
         -- Could optimize... Cache elements, put id in new table...
         return new(gView, {id=id})
@@ -637,8 +651,6 @@ function initUi()
 end
 
 function onLoad(userData)
-    --local tablet = spawnObject('Tablet')
-
     load(userData)
     initUi()
 
@@ -1026,16 +1038,20 @@ function onMenuItemClicked(player, button, uiElementId)
 
     local oldIndex = gMenu.current.selectedItemIndex
     local index = uiIndexOf(uiElementId)
+    local menuItem = gMenu.current:getItem(index)
+    local selectIndex = choose(menuItem.isBackButton, 1, index)
 
-    if gMenu.current:getItem(index).isBackButton then
-        -- Always select first button when going back
-        selectButton(oldIndex, 1)
-    else
-        selectButton(oldIndex, index)
+    selectButton(oldIndex, selectIndex)
+    menuItem:onClicked()
+end
+
+function onMenubarItemClicked(player, button, uiElementId)
+    if not isLeftMouseButton(button) then
+        return
     end
 
-    --log('clicked: ' .. index .. ' oldItem: ' .. oldIndex)
-    local menuItem = gMenu.current.items[index]
+    local index = uiIndexOf(uiElementId)
+    local menuItem = gMenus.menuBar:getItem(index)
     menuItem:onClicked()
 end
 
