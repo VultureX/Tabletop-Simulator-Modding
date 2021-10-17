@@ -51,6 +51,7 @@ gMenu = {
     title               = '',
     data                = nil, -- context dependent data
     dataItem            = nil, -- context dependent gMenuItem
+    dataItem2           = nil, -- context dependent gMenuItem
     viewItems           = nil, -- context dependent {gMenuItem}
     isFirstShow         = true,
     onConfirm           = function(this) end,
@@ -196,11 +197,14 @@ gMenus = {
         gMenus.main.viewItems = { loadPlaylistItem }
         local playlistItem = gMenuItem.newPlaylistToggle(gMenus.main.viewItems)
         gMenus.main.dataItem = playlistItem
+        local jumpToSongItem = gMenuItem.newNumericInput('Jump to song')
+        gMenus.main.dataItem2 = jumpToSongItem
         gMenus.main.items = {
             playlistItem,
             loadPlaylistItem,
             gMenuItem.new('Playlists', gMenus.playlists),
             playItem,
+            jumpToSongItem,
             --gMenuItem.new('Favorites'),
             --gMenuItem.new('Settings'),
         }
@@ -385,11 +389,17 @@ gMenus = {
         local previousButton    = gMenuItem.newBarButton()
         local nextButton        = gMenuItem.newBarButton()
         local playButton        = gMenuItem.newBarButton()
+        local jumpToSongButton  = gMenuItem.newBarButton()
         local loopButton        = gMenuItem.newBarButton()
         playButton.onClicked    = onPlayClicked
         restartButton.onClicked = onRestartClicked
         nextButton.onClicked    = onNextSongClicked
         previousButton.onClicked = onPreviousSongClicked
+        jumpToSongButton.onClicked = function(this)
+            -- main.dataItem2 is expected to be the jumpToSongItem
+            local songIndex = gMenus.main.dataItem2.data
+            gMusicPlayer.playUserSong(songIndex)
+        end
         loopButton.onClicked = function(this)
             gMusicPlayer.toggleLooping()
         end
@@ -403,7 +413,7 @@ gMenus = {
             previousButton,
             playButton,
             nextButton,
-            restartButton,
+            jumpToSongButton,
             loopButton,
         }
         gMenus.menuBar:initItems()
@@ -841,6 +851,18 @@ gMusicPlayer = {
             gMusicPlayer.songIndex = 1
         end
         gMusicPlayer.restart()
+    end,
+
+    playUserSong = function(index)
+        if notifyNoPlaylistLoaded() then return end
+
+        index = tonumber(index)
+        if index == nil or index <= 0 or
+            index > #gMusicPlayer.loadedPlaylist.songs then
+            log('Please enter a valid song number!')
+            return
+        end
+        gMusicPlayer.playSong(index)
     end,
 
     playShuffle = function(index)

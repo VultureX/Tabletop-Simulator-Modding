@@ -114,8 +114,8 @@
                 &#62;
             </Button></Cell>
             <Cell><Button class="menubarItem" id="barButton6"
-                tooltip="Restart Song">
-                .
+                tooltip="Jump to song #..">
+                #
             </Button></Cell>
             <Cell><Button class="menubarItem" id="barButton7"
                 tooltip="Loop Song">
