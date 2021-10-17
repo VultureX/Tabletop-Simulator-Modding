@@ -857,9 +857,13 @@ gMusicPlayer = {
         if notifyNoPlaylistLoaded() then return end
 
         index = tonumber(index)
-        if index == nil or index <= 0 or
-            index > #gMusicPlayer.loadedPlaylist.songs then
+        if index == nil then
             log('Please enter a valid song number!')
+            returnl
+        end
+        if index <= 0 or
+            index > #gMusicPlayer.loadedPlaylist.songs then
+            log('Song #' .. index .. ' does not exist!')
             return
         end
         gMusicPlayer.playSong(index)
