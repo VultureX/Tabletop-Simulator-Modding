@@ -272,11 +272,11 @@ gMenus = {
         gMenus.editPlaylist.title = 'Edit playlist'
         local addSongItem = gMenuItem.new('Add Song', gMenus.addSong)
         addSongItem.onClicked = passMenuDataOnClick
-        local enterSongItem = gMenuItem.newNumericInput('Enter Song #...')
+        local enterSongItem = gMenuItem.newNumericInput('Remove Song')
         gMenus.editPlaylist.dataItem = enterSongItem
         local removeSongItem = gMenuItem.new('Remove Song', gMenus.removeSong)
         removeSongItem.onClicked = function(this)
-            -- data is expected to be a gPlaylist
+            -- dataItem is expected to the enterSongItem
             local songIndex = gMenu.current.dataItem.data
             if songIndex ~= nil then
                 songIndex = tonumber(songIndex)
@@ -1143,7 +1143,11 @@ function loadMenu(menu)
 
         local view = menuItem:getView()
         if menuItem.isInputButton then
-            view:setPlaceholderText(menuItem.title)
+            if menuItem.isNumericInput then
+                view:setPlaceholderText(menuItem.title .. ' #...')
+            else
+                view:setPlaceholderText(menuItem.title)
+            end
             view:setText('')
         else
             view:setText(menuItem.title)
@@ -1228,10 +1232,11 @@ function onInputItemTextChanged(player, value, uiElementId)
         local uiElement = gView.getElement(uiElementId)
         value = crushToNumberOrNil(value)
         if value ~= nil then
-            uiElement:setPlaceholderText(menuItem.title .. value)
+            uiElement:setPlaceholderText(menuItem.title .. ' #' .. value)
         else
-            uiElement:setText(value)
+            uiElement:setPlaceholderText(menuItem.title .. ' #...')
         end
+        uiElement:setText("")
     end
 
     menuItem.data = value
