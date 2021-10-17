@@ -181,6 +181,7 @@ gMenus = {
     addSong             = new(gMenu),
     removeSong          = new(gMenu),
     removePlaylist      = new(gMenu),
+    settings            = new(gMenu),
     menuBar             = new(gMenu),
     default             = nil, -- set to one of above in gMenus.construct()
 
@@ -202,7 +203,7 @@ gMenus = {
             gMenuItem.new('Playlists', gMenus.playlists),
             playItem,
             --gMenuItem.new('Favorites'),
-            --gMenuItem.new('Settings'),
+            gMenuItem.new('Settings', gMenus.settings),
         }
         gMenus.main.onShow = function(this)
             local playlistItem = gMenu.current.dataItem
@@ -215,6 +216,12 @@ gMenus = {
             end
             gMenu.onShow(this)
         end
+
+        gMenus.settings.title = 'Settings'
+        gMenus.settings.items = {
+            gMenuItem.new('Play on load'),
+            gMenuItem.newBackButton(),
+        }
 
         gMenus.playlists.title = 'Playlists'
         local editItem
@@ -688,6 +695,51 @@ function initUi()
         .. gVersion.toString())
 end
 
+gTablet = {
+    gameObject  = nil,
+
+    spawn = function()
+        --[[
+        spawnObject({
+            type              = 'Tablet',
+            position          = self.getPosition() + {x=3.5, y=0, z=4},
+            rotation          = {0, 180, 0},
+            scale             = { 0.5, 0.5, 0.5 },
+            sound             = false,
+            callback_function = gTablet.onSpawned,
+        })
+        ]]--
+    end,
+
+    onSpawned = function(gameObject)
+        gTablet.gameObject = gameObject
+        gTablet.gameObject.getComponent("AudioSource").set("Mute", true)
+        --gTablet.gameObject.getComponent("AudioSource").set("Volume", 0.3)
+        --obj.setInvisibleTo(Player.getColors())
+        --gTablet:setUrl(gTest)
+    end,
+
+    destroy = function(this)
+        if this:isValid() then
+            destroyObject(gTablet.gameObject)
+            this.gameObject = nil
+        end
+    end,
+
+    isValid = function(this)
+        return this.gameObject ~= nil
+    end,
+
+    setUrl = function(this, url)
+        this.gameObject.setValue(url)
+    end,
+
+    getUrl = function(this, url)
+        return this.gameObject.getValue()
+    end,
+}
+gTest = 'https://www.youtube.com/watch?v=kXYiU_JCYtU'
+
 function onLoad(userData)
     math.randomseed(Time.time)
 
@@ -698,6 +750,7 @@ function onLoad(userData)
     loadMenu(gMenu.main)
 
     gMusicPlayer:load()
+    gTablet.spawn()
 end
 
 function yield()
@@ -967,7 +1020,7 @@ gMusicPlayer = {
 
         if not MusicPlayer.loaded and passedTime >= timeOut then
             log('Music Player timed out')
-            gMusicPlayer:reset()
+            --gMusicPlayer:reset()
         end
 
         -- Weird behaviour where MusicPlayer will be in 'Ready' or 'Pause'
@@ -975,7 +1028,6 @@ gMusicPlayer = {
         logDebug(MusicPlayer.player_status)
         if MusicPlayer.player_status == 'Pause' or
                 MusicPlayer.player_status == 'Ready' then
-            --log('MusicPlayer: ' .. MusicPlayer.player_status)
             yield()
         end
         logDebug(MusicPlayer.player_status)
@@ -1261,6 +1313,13 @@ function onUpdate()
     if gMusicPlayer.autoPlay and not gCoroutine.isProcessing then
         if gMusicPlayer.isPlaylistLoaded() and not gMusicPlayer.isPlaying() then
             gMusicPlayer.switchSong()
+        end
+    end
+
+    if gTablet:isValid() then
+        gTablet:destroy()
+        if gTablet:getUrl() ~= gTest then
+            --print('hi')
         end
     end
 end
