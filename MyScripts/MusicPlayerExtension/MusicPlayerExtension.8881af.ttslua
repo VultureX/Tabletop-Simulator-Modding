@@ -1217,7 +1217,7 @@ function onInputEnded(player, value, uiElementId)
 end
 
 function onInputItemEnter(player, value, uiElementId)
-    log(player.steam_name .. " ended input: " .. value)
+    --log(player.steam_name .. " ended input: " .. value)
 end
 
 function onInputClicked(player, button, uiElementId)
