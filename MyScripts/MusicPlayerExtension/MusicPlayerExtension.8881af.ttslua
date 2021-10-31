@@ -764,6 +764,7 @@ gMusicPlayer = {
     songIndex               = 0,
     loadedPlaylist          = nil, --gPlaylist
     isLoading               = false,
+    onLoadingDoneMessage    = nil,
     autoPlay                = false,
     loopSong                = false,
     shuffle                 = false,
@@ -873,6 +874,8 @@ gMusicPlayer = {
             return
         end
         gMusicPlayer.playSong(index)
+        gMusicPlayer.onLoadingDoneMessage =
+            'Jumped to song #' .. gMusicPlayer.songIndex
     end,
 
     playShuffle = function(index)
@@ -1100,12 +1103,17 @@ function showMusicPlayerStatus()
     end
 
     if gMusicPlayer.isPlaylistLoaded() then
+        if gMusicPlayer.onLoadingDoneMessage ~= nil then
+            status = status .. gMusicPlayer.onLoadingDoneMessage .. "'\n"
+            gMusicPlayer.onLoadingDoneMessage = nil
+        end
         status = status .. "Playlist '"
         status = status .. gMusicPlayer.loadedPlaylist.title .. "'\n"
         status = status .. textSongPlaying(gMusicPlayer.loadedPlaylist,
             gMusicPlayer.songIndex)
     else
         status = status .. "No playlist loaded\n"
+        gMusicPlayer.onLoadingDoneMessage = nil
     end
 
     if status != '' then log(status) end
@@ -1260,6 +1268,15 @@ function crushToNumberOrNil(value)
     return tonumber(value)
 end
 
+function updateNumericInput(menuItem, uiElement, value)
+    if(value ~= nil) then
+        uiElement:setPlaceholderText(menuItem.title .. ' #' .. value)
+    else
+        uiElement:setPlaceholderText(menuItem.title .. ' #...')
+    end
+    uiElement:setText("")
+end
+
 function onInputItemTextChanged(player, value, uiElementId)
     local index = uiIndexOf(uiElementId)
     local menuItem = gMenu.current:getItem(index)
@@ -1267,19 +1284,17 @@ function onInputItemTextChanged(player, value, uiElementId)
         -- Treat pressing spacebar as enter
         local uiElement = gView.getElement(uiElementId)
         if value == ' ' then
-            uiElement:setText("")
+            updateNumericInput(menuItem, uiElement, nil)
             menuItem:onEntered()
+            menuItem.data = nil
             return
         end
 
         value = crushToNumberOrNil(value)
         if value ~= nil then
             value = stringOr(menuItem.data, "") .. value
-            uiElement:setPlaceholderText(menuItem.title .. ' #' .. value)
-        else
-            uiElement:setPlaceholderText(menuItem.title .. ' #...')
         end
-        uiElement:setText("")
+        updateNumericInput(menuItem, uiElement, value)
     end
 
     menuItem.data = value
