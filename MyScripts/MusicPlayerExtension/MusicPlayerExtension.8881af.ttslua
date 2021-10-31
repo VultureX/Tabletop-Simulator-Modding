@@ -335,9 +335,17 @@ gMenus = {
         gMenus.removePlaylist.onConfirm = function(menu)
             -- data is expected to be a gPlaylist
             local index = listIndexOf(menu.data.title, gData.playlists)
+            local currentListIndex =
+                listIndexOf(gMusicPlayer.loadedPlaylist.title, gData.playlists)
+            if currentListIndex == index and gMusicPlayer.isPlaying() then
+                log("Please pause the current playlist before removing it!")
+                return
+            end
+
             if index > 0 then
                 table.remove(gData.playlists, index)
                 show("Removed '" .. menu.data.title .. "'")
+                gMusicPlayer:reset()
                 goBackMenu()
             end
         end
