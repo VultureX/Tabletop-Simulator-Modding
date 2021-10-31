@@ -891,7 +891,7 @@ gMusicPlayer = {
 
     previousSong = function()
         local index = gMusicPlayer.songIndex - 1
-        if index <= 0 then
+        if index <= 0 and gMusicPlayer.loadedPlaylist ~= nil then
             index = #gMusicPlayer.loadedPlaylist.songs
         end
         gMusicPlayer.playShuffle(index)
