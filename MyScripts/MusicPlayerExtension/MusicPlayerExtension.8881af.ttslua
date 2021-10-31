@@ -204,6 +204,10 @@ gMenus = {
         gMenus.main.dataItem = playlistItem
         local jumpToSongItem = gMenuItem.newNumericInput('Jump to song')
         jumpToSongItem.onEntered = onJumpToSongClicked
+        local aboutItem = gMenuItem.new('About')
+        aboutItem.onClicked = function(item)
+            log(getAboutText())
+        end
         gMenus.main.dataItem2 = jumpToSongItem
         gMenus.main.items = {
             playlistItem,
@@ -211,6 +215,7 @@ gMenus = {
             gMenuItem.new('Playlists', gMenus.playlists),
             playItem,
             jumpToSongItem,
+            aboutItem,
             --gMenuItem.new('Favorites'),
             --gMenuItem.new('Settings'),
         }
@@ -717,9 +722,12 @@ function addSong(name, url, playlist)
     return true
 end
 
+function getAboutText()
+    return gWindow.title .. " by VultureX - " .. gVersion.toString()
+end
+
 function initUi()
-    gView.setPlaceholderText(gWindow.id, gWindow.title .. " by VultureX - "
-        .. gVersion.toString())
+    gView.setPlaceholderText(gWindow.id, getAboutText())
 end
 
 function onLoad(userData)
