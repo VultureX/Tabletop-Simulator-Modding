@@ -859,7 +859,7 @@ gMusicPlayer = {
         index = tonumber(index)
         if index == nil then
             log('Please enter a valid song number!')
-            returnl
+            return
         end
         if index <= 0 or
             index > #gMusicPlayer.loadedPlaylist.songs then
