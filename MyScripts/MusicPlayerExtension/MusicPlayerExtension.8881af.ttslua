@@ -173,6 +173,11 @@ onPlayClicked       = function(item) gMusicPlayer.play() end
 onRestartClicked    = function(item) gMusicPlayer.restart() end
 onNextSongClicked   = function(item) gMusicPlayer.nextSong() end
 onPreviousSongClicked = function(item) gMusicPlayer.previousSong() end
+onJumpToSongClicked = function(item)
+    -- main.dataItem2 is expected to be the jumpToSongItem
+    local songIndex = gMenus.main.dataItem2.data
+    gMusicPlayer.playUserSong(songIndex)
+end
 
 gMenus = {
     main                = new(gMenu),
@@ -198,6 +203,7 @@ gMenus = {
         local playlistItem = gMenuItem.newPlaylistToggle(gMenus.main.viewItems)
         gMenus.main.dataItem = playlistItem
         local jumpToSongItem = gMenuItem.newNumericInput('Jump to song')
+        jumpToSongItem.onEntered = onJumpToSongClicked
         gMenus.main.dataItem2 = jumpToSongItem
         gMenus.main.items = {
             playlistItem,
@@ -395,11 +401,7 @@ gMenus = {
         restartButton.onClicked = onRestartClicked
         nextButton.onClicked    = onNextSongClicked
         previousButton.onClicked = onPreviousSongClicked
-        jumpToSongButton.onClicked = function(this)
-            -- main.dataItem2 is expected to be the jumpToSongItem
-            local songIndex = gMenus.main.dataItem2.data
-            gMusicPlayer.playUserSong(songIndex)
-        end
+        jumpToSongButton.onClicked = onJumpToSongClicked
         loopButton.onClicked = function(this)
             gMusicPlayer.toggleLooping()
         end
@@ -452,6 +454,10 @@ gMenuItem = {
         end
 
         loadMenu(this.nextMenu)
+    end,
+
+    onEntered = function(this)
+        onClicked(this)
     end,
 
     getView = function(this)
@@ -1210,6 +1216,10 @@ function onInputEnded(player, value, uiElementId)
     --log(player.steam_name .. " ended input: " .. value)
 end
 
+function onInputItemEnter(player, value, uiElementId)
+    log(player.steam_name .. " ended input: " .. value)
+end
+
 function onInputClicked(player, button, uiElementId)
     --log(player.steam_name .. " got focus: " .. button)
     goHome()
@@ -1253,11 +1263,18 @@ end
 function onInputItemTextChanged(player, value, uiElementId)
     local index = uiIndexOf(uiElementId)
     local menuItem = gMenu.current:getItem(index)
-
     if menuItem.isNumericInput then
+        -- Treat pressing spacebar as enter
         local uiElement = gView.getElement(uiElementId)
+        if value == ' ' then
+            uiElement:setText("")
+            menuItem:onEntered()
+            return
+        end
+
         value = crushToNumberOrNil(value)
         if value ~= nil then
+            value = stringOr(menuItem.data, "") .. value
             uiElement:setPlaceholderText(menuItem.title .. ' #' .. value)
         else
             uiElement:setPlaceholderText(menuItem.title .. ' #...')
