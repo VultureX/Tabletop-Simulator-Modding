@@ -457,7 +457,7 @@ gMenuItem = {
     end,
 
     onEntered = function(this)
-        onClicked(this)
+        this:onClicked()
     end,
 
     getView = function(this)
