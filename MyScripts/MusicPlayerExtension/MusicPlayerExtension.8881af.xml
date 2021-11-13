@@ -147,13 +147,13 @@
         offsetXY= "-43 -4">
         U
     </Button>
-    <Button onClick="onHelpButtonClicked" id="infoButton"
+    <!-- <Button onClick="onHelpButtonClicked" id="infoButton"
         tooltip="Show help / instructions"
         height="21"
         width="30"
         offsetXY= "43 -4">
         H
-    </Button>
+    </Button> -->
 </Panel>
 
 <!-- Output Window -->

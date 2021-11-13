@@ -1313,10 +1313,6 @@ function onToggleUrlButtonClicked(player, button, uiElementId)
     gMusicPlayer.toggleShowUrls()
 end
 
-function onHelpButtonClicked(player, button, uiElementId)
-
-end
-
 function crushToNumberOrNil(value)
     while tonumber(value) == nil and string.len(value) > 0 do
         value = string.sub(value, 1, string.len(value) - 1)
