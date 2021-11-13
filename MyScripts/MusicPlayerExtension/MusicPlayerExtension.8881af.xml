@@ -127,7 +127,7 @@
 </TableLayout>
 </VerticalScrollView>
 
-<!-- Home Button -->
+<!-- Home Button, UI toggle, info button -->
 <Panel offsetXY="0 -83">
     <Button
         id="mainInput"
@@ -139,6 +139,20 @@
         fontSize="14"
         colors="White|Gray|Green|Red"
         onClick="onHomeButtonClicked">
+    </Button>
+    <Button onClick="onToggleUrlButtonClicked" id="toggleUrlButton"
+        tooltip="Toggle showing URLs"
+        height="21"
+        width="30"
+        offsetXY= "-43 -4">
+        U
+    </Button>
+    <Button onClick="onHelpButtonClicked" id="infoButton"
+        tooltip="Show help / instructions"
+        height="21"
+        width="30"
+        offsetXY= "43 -4">
+        H
     </Button>
 </Panel>
 

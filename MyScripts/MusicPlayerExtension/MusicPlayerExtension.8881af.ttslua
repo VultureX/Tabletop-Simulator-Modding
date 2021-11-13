@@ -661,6 +661,8 @@ gData = {
     -- v1.2.0
     wasLooping          = false,
     wasShuffle          = false,
+    -- v1.3.0
+    wasShowingUrls      = true,
 }
 
 function containsNumber(list, number)
@@ -794,6 +796,7 @@ gMusicPlayer = {
     autoPlay                = false,
     loopSong                = false,
     shuffle                 = false,
+    showUrls                = false,
     playedSongIndices       = {}, -- indices of songs played by shuffle
     loopButton              = nil, -- gMenuItem
     shuffleButton           = nil, -- gMenuItem
@@ -824,9 +827,23 @@ gMusicPlayer = {
         gMusicPlayer:updateUi()
     end,
 
+    setShowUrls = function(bShowUrls)
+        gMusicPlayer.showUrls = bShowUrls
+        gMusicPlayer:updateUi()
+    end,
+
+    toggleShowUrls = function()
+        gMusicPlayer.setShowUrls(not gMusicPlayer.showUrls)
+        clearScreen()
+        showMusicPlayerStatus()
+        gMusicPlayer:updateUi()
+    end,
+
     updateUi = function(this)
         highlightButton(this.loopButton, this.loopSong)
         highlightButton(this.shuffleButton, this.shuffle)
+        local showUrlButton = gView.getElement('toggleUrlButton')
+        highlightElement(showUrlButton, this.showUrls)
     end,
 
     reset = function(this)
@@ -839,6 +856,7 @@ gMusicPlayer = {
         this:loadPlaylist(gData.lastPlaylistIndex, gData.lastSongIndex)
         this.setLooping(gData.wasLooping)
         this.setShuffle(gData.wasShuffle)
+        this.setShowUrls(gData.wasShowingUrls)
     end,
 
     save = function(this)
@@ -852,6 +870,7 @@ gMusicPlayer = {
         end
         gData.wasLooping = this.loopSong
         gData.wasShuffle = this.shuffle
+        gData.wasShowingUrls = this.showUrls
     end,
 
     loadPlaylist = function(this, index, songIndex)
@@ -1116,8 +1135,11 @@ textSongPlaying = function(playlist, index)
                 str = str .. '>|'
             end
         end
-        str = str .. '#' .. k .. ' ' .. song.title .. ' ('
-        str = str .. song.url .. ')\n' -- todo: cap string length
+        str = str .. '#' .. k .. ' ' .. song.title
+        if gMusicPlayer.showUrls then
+            str = str .. ' (' .. song.url .. ')' -- todo: cap string length
+        end
+        str = str .. '\n'
     end
     return str
 end
@@ -1235,6 +1257,12 @@ function selectButton(oldIndex, newIndex)
     gMenu.current.selectedItemIndex = newIndex
 end
 
+function highlightElement(uiElement, shouldHighlight)
+    local color = choose(shouldHighlight
+        , gMenuItem.highlightColor, gMenuItem.defaultColor)
+    gView.setColor(uiElement, color)
+end
+
 function highlightButton(button, shouldHighlight)
     local color
         = choose(shouldHighlight, button.highlightColor, button.defaultColor)
@@ -1276,6 +1304,14 @@ function onMenubarItemClicked(player, button, uiElementId)
     local index = uiIndexOf(uiElementId)
     local menuItem = gMenus.menuBar:getItem(index)
     menuItem:onClicked()
+end
+
+function onToggleUrlButtonClicked(player, button, uiElementId)
+    gMusicPlayer.toggleShowUrls()
+end
+
+function onHelpButtonClicked(player, button, uiElementId)
+
 end
 
 function crushToNumberOrNil(value)
