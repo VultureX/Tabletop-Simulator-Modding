@@ -113,6 +113,15 @@ textPlaylists = function()
     return str
 end
 
+function appendSongString(str, k, song)
+    str = str .. '#' .. k .. ' ' .. song.title
+    if gMusicPlayer.showUrls then
+        str = str .. ' (' .. song.url .. ')' -- todo: cap string length
+    end
+    str = str .. '\n'
+    return str
+end
+
 textSongs = function(playlist)
     local noSongs = textNoSongs(playlist)
     if noSongs ~= nil then
@@ -121,8 +130,7 @@ textSongs = function(playlist)
 
     local str = 'Songs in ' .. playlist.title .. ':\n'
     for k , song in pairs(playlist.songs) do
-        str = str .. '#' .. k .. ' ' .. song.title .. ' ('
-        str = str .. song.url .. ')\n' -- todo: cap string length
+        str = appendSongString(str, k, song)
     end
     return str
 end
@@ -834,8 +842,7 @@ gMusicPlayer = {
 
     toggleShowUrls = function()
         gMusicPlayer.setShowUrls(not gMusicPlayer.showUrls)
-        clearScreen()
-        showMusicPlayerStatus()
+        gMenu.current:onShow()
         gMusicPlayer:updateUi()
     end,
 
@@ -1135,11 +1142,7 @@ textSongPlaying = function(playlist, index)
                 str = str .. '>|'
             end
         end
-        str = str .. '#' .. k .. ' ' .. song.title
-        if gMusicPlayer.showUrls then
-            str = str .. ' (' .. song.url .. ')' -- todo: cap string length
-        end
-        str = str .. '\n'
+        str = appendSongString(str, k, song)
     end
     return str
 end
