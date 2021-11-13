@@ -1241,20 +1241,11 @@ function highlightButton(button, shouldHighlight)
     button:getView():setColor(color)
 end
 
-function onInput(player, value, uiElementId)
-    --log(player.steam_name .. " typed: " .. value .. " by id: " .. uiElementId)
-    gView.getElement(uiElementId):setText("")
-end
-
-function onInputEnded(player, value, uiElementId)
-    --log(player.steam_name .. " ended input: " .. value)
-end
-
 function onInputItemEnter(player, value, uiElementId)
     --log(player.steam_name .. " ended input: " .. value)
 end
 
-function onInputClicked(player, button, uiElementId)
+function onHomeButtonClicked(player, button, uiElementId)
     --log(player.steam_name .. " got focus: " .. button)
     goHome()
 end

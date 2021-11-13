@@ -127,22 +127,19 @@
 </TableLayout>
 </VerticalScrollView>
 
-<!-- Control Window -->
-<Panel offsetXY="0 -85">
-    <VerticalScrollView class="menuItem" width="60" height="30">
-    <InputField
+<!-- Home Button -->
+<Panel offsetXY="0 -83">
+    <Button
         id="mainInput"
-        height="40"
+        height="30"
         width="60"
-        offsetXY="0 0"
-        placeholder="Home"
+        textAlignment="MiddleCenter"
+        text="Home"
+        tooltip="Go to main menu"
         fontSize="14"
         colors="White|Gray|Green|Red"
-        onValueChanged="onInput"
-        onEndEdit="onInputEnded"
-        onMouseUp="onInputClicked">
-    </InputField>
-    </VerticalScrollView>
+        onClick="onHomeButtonClicked">
+    </Button>
 </Panel>
 
 <!-- Output Window -->
