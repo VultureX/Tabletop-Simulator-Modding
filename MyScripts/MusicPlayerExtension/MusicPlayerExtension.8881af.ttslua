@@ -1,4 +1,4 @@
--- Music Player Extension v1.1.0 by VultureX
+-- Music Player Extension v1.3.1 by VultureX
 
 function new(parent, object)
     object = object or {}
@@ -23,7 +23,7 @@ function isScrollButton(button)     return tonumber(button) == -3 end
 gVersion = {
     major   = '1',
     minor   = '3',
-    patch   = '0',
+    patch   = '1',
 
     toString = function()
         return 'v' .. gVersion.major
