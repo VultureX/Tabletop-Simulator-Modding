@@ -1,2 +1,18 @@
 https://api.tabletopsimulator.com/atom/
+
+Atom got deprecated, you need to download this exact version and the plugin seperately:
+https://github.com/atom/atom/releases/tag/v1.60.0
+https://github.com/Berserk-Games/atom-tabletopsimulator-lua/releases/tag/13.2.0
+
+Github no longer supports https links so now you need SSH key creation...
+https://medium.com/@kyledeguzmanx/quick-step-by-step-guide-to-generating-an-ssh-key-in-github-d3c6f7e185bb
+
+Basically:
+ - run 'ssh-keygen -b 4096 -t rsa'
+ - press enter on all prompts
+ - find the key in C:\Users\[USERNAME]\.ssh\is_rsa.pub
+ - Copy + add it in Github account settings under SSH keys
+
+Forgot what this was for, but it was a nightmare the last time I tried to push something too:
 https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token
+
