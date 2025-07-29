@@ -5,6 +5,7 @@ https://github.com/atom/atom/releases/tag/v1.60.0
 https://github.com/Berserk-Games/atom-tabletopsimulator-lua/releases/tag/13.2.0
 
 Github no longer supports https links so now you need SSH key creation...
+https://docs.github.com/en/get-started/getting-started-with-git/managing-remote-repositories#switching-remote-urls-from-https-to-ssh
 https://medium.com/@kyledeguzmanx/quick-step-by-step-guide-to-generating-an-ssh-key-in-github-d3c6f7e185bb
 
 Basically:
