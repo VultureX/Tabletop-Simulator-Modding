@@ -1089,9 +1089,14 @@ gMusicPlayer = {
             gMusicPlayer.autoPlay = false
         else
             if not MusicPlayer.play() then
-                logError('Failed to unpause MusicPlayer!')
-                -- Try reloading audio
-                gMusicPlayer.reloadAudioCoroutine()
+              if gMusicPlayer.hasFailed then
+                  -- skip to the next song
+                  gMusicPlayer.switchSong()
+              else
+                  logError('Failed to unpause MusicPlayer!')
+                  -- Try reloading audio
+                  gMusicPlayer.reloadAudioCoroutine()
+              end
             end
         end
         logDebug(MusicPlayer.player_status)
