@@ -251,10 +251,10 @@ gMenus = {
             = gMenuItem.newPlaylistToggle(gMenus.playlists.viewItems)
         gMenus.playlists.dataItem = playlistItem
         gMenus.playlists.items = {
-            gMenuItem.new('Create', gMenus.createPlaylist),
             playlistItem,
             editItem,
             removeItem,
+            gMenuItem.new('Create', gMenus.createPlaylist),
             gMenuItem.newBackButton(),
         }
         gMenus.playlists.onShow = function(this)
