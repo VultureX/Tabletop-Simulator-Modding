@@ -759,32 +759,45 @@ end
 gCoroutine = {
     isProcessing        = false,
     functionToExecute   = nil, -- function(args)
-    args                = nil, -- arguments for functionToExecute
+    queuedFunctionToExecute = nil, -- function to execute after done processing
+    --args                = nil, -- arguments for functionToExecute
 
-    setArgs = function(args)
-        if gCoroutine.isProcessing then
-            log("Coroutine is still processing! (setArgs)")
-            return false
-        end
-        gCoroutine.args = args
-        return true
-    end,
+    --setArgs = function(args)
+    --    if gCoroutine.isProcessing then
+    --        log("Coroutine is still processing! (setArgs)")
+    --        return false
+    --    end
+    --    gCoroutine.args = args
+    --    return true
+    --end,
 
     impl = function()
-        gCoroutine.functionToExecute(gCoroutine.args)
-        gCoroutine.args = nil
-        gCoroutine.isProcessing = false
+        gCoroutine.functionToExecute(--[[gCoroutine.args--]])
+        --gCoroutine.args = nil
+        if gCoroutine.queuedFunctionToExecute ~= nil then
+          gCoroutine.queuedFunctionToExecute()
+          gCoroutine.queuedFunctionToExecute = nil
+          debugLog("Done.")
+        end
+          gCoroutine.isProcessing = false
         return 1
     end,
 
     start = function(action)
         if not isFunction(action) then
-            log("Can't execute null action! (start)")
+            logDebug("Can't execute null action! (start)")
             return false
         end
 
         if gCoroutine.isProcessing then
-            log("Coroutine is still processing! (start)")
+            if gCoroutine.queuedFunctionToExecute == nil then
+              -- queue the next call
+              debugLog("Please wait...")
+              gCoroutine.queuedFunctionToExecute = action
+            else
+              log("Please wait until the previous action has completed!")
+            end
+
             return false
         end
 
