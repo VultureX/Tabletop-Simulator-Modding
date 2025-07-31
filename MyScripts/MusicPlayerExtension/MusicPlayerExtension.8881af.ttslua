@@ -777,7 +777,7 @@ gCoroutine = {
         if gCoroutine.queuedFunctionToExecute ~= nil then
           gCoroutine.queuedFunctionToExecute()
           gCoroutine.queuedFunctionToExecute = nil
-          debugLog("Done.")
+          logDebug("Done.")
         end
           gCoroutine.isProcessing = false
         return 1
@@ -792,7 +792,7 @@ gCoroutine = {
         if gCoroutine.isProcessing then
             if gCoroutine.queuedFunctionToExecute == nil then
               -- queue the next call
-              debugLog("Please wait...")
+              logDebug("Please wait...")
               gCoroutine.queuedFunctionToExecute = action
             else
               log("Please wait until the previous action has completed!")
