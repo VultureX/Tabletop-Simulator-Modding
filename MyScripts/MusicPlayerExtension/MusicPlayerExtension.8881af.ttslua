@@ -1165,16 +1165,13 @@ textSongPlaying = function(playlist, index)
 end
 
 function showMusicPlayerStatus()
-    local status = ''
-    --if gMusicPlayer.isLoading then
-        --status = status .. 'Loading...\n'
-    --end
+    -- Don't show music player status when we're interacting with other menus
+    if not isHome() then
+        return
+    end
 
+    local status = ''
     if gMusicPlayer.isPlaylistLoaded() then
-        --if gMusicPlayer.onLoadingDoneMessage ~= nil then
-            --status = status .. gMusicPlayer.onLoadingDoneMessage .. "'\n"
-            --gMusicPlayer.onLoadingDoneMessage = nil
-        --end
         status = status .. "Playlist '"
         status = status .. gMusicPlayer.loadedPlaylist.title
         if gMusicPlayer.isLoading then
@@ -1186,7 +1183,6 @@ function showMusicPlayerStatus()
             gMusicPlayer.songIndex)
     else
         status = status .. "No playlist loaded\n"
-        --gMusicPlayer.onLoadingDoneMessage = nil
     end
 
     if status != '' then log(status) end
@@ -1217,6 +1213,10 @@ function goHome()
         end
         loadMenu()
     end
+end
+
+function isHome()
+    return #gMenuStack == 1
 end
 
 function loadMenu(menu)
