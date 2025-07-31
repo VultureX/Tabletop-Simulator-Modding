@@ -1023,7 +1023,6 @@ gMusicPlayer = {
         logDebug(MusicPlayer.player_status)
         if notifyNoPlaylistLoaded() then return end
 
-        MusicPlayer.setPlaylist({}) -- Prevent bug with audio not working?...
         if gMusicPlayer.isPlaying() then
             if not MusicPlayer.pause() then
                 log('Failed to pause MusicPlayer!')
@@ -1057,7 +1056,7 @@ gMusicPlayer = {
         -- we reset the playlist and handle loading next songs ourselves.
         local clip = gMusicPlayer.loadedPlaylist.songs[gMusicPlayer.songIndex]
         MusicPlayer.setCurrentAudioclip(clip)
-        MusicPlayer.setPlaylist({})
+        MusicPlayer.setPlaylist(clip)
 
         local timeOut = 3.0
         local passedTime = 0.0
