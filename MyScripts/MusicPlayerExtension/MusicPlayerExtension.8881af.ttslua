@@ -813,7 +813,7 @@ gMusicPlayer = {
     songIndex               = 0,
     loadedPlaylist          = nil, --gPlaylist
     isLoading               = false,
-    onLoadingDoneMessage    = nil,
+    --onLoadingDoneMessage    = nil,
     autoPlay                = false,
     loopSong                = false,
     shuffle                 = false,
@@ -939,8 +939,8 @@ gMusicPlayer = {
             return
         end
         gMusicPlayer.playSong(index)
-        gMusicPlayer.onLoadingDoneMessage =
-            'Jumped to song #' .. gMusicPlayer.songIndex
+        --gMusicPlayer.onLoadingDoneMessage =
+            --'Jumped to song #' .. gMusicPlayer.songIndex
     end,
 
     playShuffle = function(index)
@@ -1047,6 +1047,7 @@ gMusicPlayer = {
         if notifyNoPlaylistLoaded() then return end
 
         gMusicPlayer.setLoading(true)
+        clearScreen()
         showMusicPlayerStatus()
 
         -- Setting the current Audioclip breaks the in-game Music Player UI,
@@ -1090,6 +1091,7 @@ gMusicPlayer = {
         else
             gMusicPlayer.autoPlay = true
         end
+        clearScreen()
         showMusicPlayerStatus()
     end,
 
@@ -1098,11 +1100,13 @@ gMusicPlayer = {
         if gMusicPlayer.isPlaying() then
             gMusicPlayer.playCoroutine()
         end
+        clearScreen()
         showMusicPlayerStatus()
     end,
 
     pausePlayCoroutine = function(args)
         gMusicPlayer.playCoroutine()
+        clearScreen()
         showMusicPlayerStatus()
     end,
 
@@ -1162,22 +1166,27 @@ end
 
 function showMusicPlayerStatus()
     local status = ''
-    if gMusicPlayer.isLoading then
-        status = status .. 'Loading...\n'
-    end
+    --if gMusicPlayer.isLoading then
+        --status = status .. 'Loading...\n'
+    --end
 
     if gMusicPlayer.isPlaylistLoaded() then
-        if gMusicPlayer.onLoadingDoneMessage ~= nil then
-            status = status .. gMusicPlayer.onLoadingDoneMessage .. "'\n"
-            gMusicPlayer.onLoadingDoneMessage = nil
-        end
+        --if gMusicPlayer.onLoadingDoneMessage ~= nil then
+            --status = status .. gMusicPlayer.onLoadingDoneMessage .. "'\n"
+            --gMusicPlayer.onLoadingDoneMessage = nil
+        --end
         status = status .. "Playlist '"
-        status = status .. gMusicPlayer.loadedPlaylist.title .. "'\n"
+        status = status .. gMusicPlayer.loadedPlaylist.title
+        if gMusicPlayer.isLoading then
+            status = status .. "' (Loading...)\n"
+        else
+            status = status .. "'\n"
+        end
         status = status .. textSongPlaying(gMusicPlayer.loadedPlaylist,
             gMusicPlayer.songIndex)
     else
         status = status .. "No playlist loaded\n"
-        gMusicPlayer.onLoadingDoneMessage = nil
+        --gMusicPlayer.onLoadingDoneMessage = nil
     end
 
     if status != '' then log(status) end
