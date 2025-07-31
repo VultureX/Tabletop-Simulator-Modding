@@ -870,6 +870,7 @@ gMusicPlayer = {
     songIndex               = 0,
     loadedPlaylist          = nil, --gPlaylist
     isLoading               = false,
+    hasFailed               = false,
     --onLoadingDoneMessage    = nil,
     autoPlay                = false,
     loopSong                = false,
@@ -1080,19 +1081,17 @@ gMusicPlayer = {
         logDebug(MusicPlayer.player_status)
         if notifyNoPlaylistLoaded() then return end
 
+        gMusicPlayer.autoPlay = not gMusicPlayer.autoPlay
         if gMusicPlayer.isPlaying() then
             if not MusicPlayer.pause() then
-                log('Failed to pause MusicPlayer!')
-            else
-                gMusicPlayer.autoPlay = false
+                logError('Failed to pause MusicPlayer!')
             end
+            gMusicPlayer.autoPlay = false
         else
             if not MusicPlayer.play() then
-                log('Failed to unpause MusicPlayer!')
+                logError('Failed to unpause MusicPlayer!')
                 -- Try reloading audio
                 gMusicPlayer.reloadAudioCoroutine()
-            else
-                gMusicPlayer.autoPlay = true
             end
         end
         logDebug(MusicPlayer.player_status)
@@ -1123,8 +1122,13 @@ gMusicPlayer = {
         end
 
         if not MusicPlayer.loaded and passedTime >= timeOut then
-            log('Music Player timed out')
-            gMusicPlayer:reset()
+            logError("Failed to load song #"
+              .. gMusicPlayer.songIndex .. " (" .. clip.title .. ")")
+            logError("Please check if [" .. clip.url .. "] is valid.")
+            gMusicPlayer.hasFailed = true
+            --gMusicPlayer:reset()
+        else
+            gMusicPlayer.hasFailed = false
         end
 
         -- Weird behaviour where MusicPlayer will be in 'Ready' or 'Pause'
@@ -1142,7 +1146,7 @@ gMusicPlayer = {
 
     restartCoroutine = function(args)
         gMusicPlayer.reloadAudioCoroutine()
-        if not gMusicPlayer.isPlaying() then
+        if not gMusicPlayer.isPlaying() and not gMusicPlayer.hasFailed then
             gMusicPlayer.playCoroutine()
         else
             gMusicPlayer.autoPlay = true
@@ -1507,6 +1511,10 @@ function log(message)
         return
     end
     output(message)
+end
+
+function logError(message)
+    printToAll(stringify(message), {r=0.9,g=0,b=0})
 end
 
 function logDebug(message)
