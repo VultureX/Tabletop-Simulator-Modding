@@ -206,6 +206,13 @@ moveSong = function(oldIndex, newIndex)
     -- update the input button
     local view = gMenu.current.dataItem:getView()
     updateNumericInput(gMenu.current.dataItem, view, newIndex)
+
+    -- update music player song index
+    if oldIndex == gMusicPlayer.songIndex then
+        gMusicPlayer.songIndex = newIndex
+    elseif newIndex == gMusicPlayer.songIndex then
+        gMusicPlayer.songIndex = oldIndex
+    end
 end
 
 onPlayClicked       = function(item) gMusicPlayer.play() end
@@ -475,6 +482,14 @@ gMenus = {
             local songTitle = menu.data.songs[menu.data.songIndex].title
             table.remove(menu.data.songs, menu.data.songIndex)
             show("Removed '" .. songTitle .. "'")
+
+            -- update music player song index
+            if menu.data.songIndex < gMusicPlayer.songIndex then
+                gMusicPlayer.songIndex = gMusicPlayer.songIndex - 1
+            elseif menu.data.songIndex == gMusicPlayer.songIndex then
+                gMusicPlayer.songIndex = 0
+            end
+
             goBackMenu()
         end
 
