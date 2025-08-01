@@ -380,8 +380,8 @@ gMenus = {
             gMenuItem.newBackButton(),
         }
         gMenus.editPlaylist.onLoad = function(menu)
-            local songIndex = gMenus.playlists.dataItem.data
-            menu.data = gData.playlists[songIndex]
+            local playListIndex = gMenus.playlists.dataItem.data
+            menu.data = gData.playlists[playListIndex]
             menu.title = 'Edit ' .. menu.data.title
             gMenu.onLoad(menu)
         end
