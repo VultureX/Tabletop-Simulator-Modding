@@ -1093,7 +1093,7 @@ gMusicPlayer = {
     end,
 
     playCoroutine = function(args)
-        logDebug(MusicPlayer.player_status)
+        logDebug(MusicPlayer.player_status .. ' - [Begin] playCoroutine')
         if notifyNoPlaylistLoaded() then return end
 
         gMusicPlayer.autoPlay = not gMusicPlayer.autoPlay
@@ -1114,11 +1114,11 @@ gMusicPlayer = {
               end
             end
         end
-        logDebug(MusicPlayer.player_status)
+        logDebug(MusicPlayer.player_status .. ' - [End] playCoroutine')
     end,
 
     reloadAudioCoroutine = function(args)
-        logDebug(MusicPlayer.player_status)
+        logDebug(MusicPlayer.player_status .. ' - [Begin] reloadAudioCoroutine')
         if notifyNoPlaylistLoaded() then return end
 
         gMusicPlayer.setLoading(true)
@@ -1153,18 +1153,19 @@ gMusicPlayer = {
 
         -- Weird behaviour where MusicPlayer will be in 'Ready' or 'Pause'
         -- state for one frame, after which it will go to 'Play'
-        logDebug(MusicPlayer.player_status)
+        logDebug(MusicPlayer.player_status .. ' - [Before] yield')
         if MusicPlayer.player_status == 'Pause' or
                 MusicPlayer.player_status == 'Ready' then
             --log('MusicPlayer: ' .. MusicPlayer.player_status)
             yield()
         end
-        logDebug(MusicPlayer.player_status)
+        logDebug(MusicPlayer.player_status .. ' - [After] yield')
 
         gMusicPlayer.setLoading(false)
     end,
 
     restartCoroutine = function(args)
+        logDebug('[Begin] restartCoroutine')
         gMusicPlayer.reloadAudioCoroutine()
         if not gMusicPlayer.isPlaying() and not gMusicPlayer.hasFailed then
             gMusicPlayer.playCoroutine()
@@ -1176,6 +1177,7 @@ gMusicPlayer = {
     end,
 
     reloadCoroutine = function(args)
+        logDebug('[Begin] reloadCoroutine')
         gMusicPlayer.reloadAudioCoroutine()
         if gMusicPlayer.isPlaying() then
             gMusicPlayer.playCoroutine()
@@ -1185,6 +1187,7 @@ gMusicPlayer = {
     end,
 
     pausePlayCoroutine = function(args)
+        logDebug('[Begin] pausePlayCoroutine')
         gMusicPlayer.playCoroutine()
         clearScreen()
         showMusicPlayerStatus()
