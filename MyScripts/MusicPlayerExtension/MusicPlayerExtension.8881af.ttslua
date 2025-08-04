@@ -225,6 +225,20 @@ onJumpToSongClicked = function(item)
     gMusicPlayer.playUserSong(songIndex)
 end
 
+updatePlayButton = function()
+  -- Update play / pause button text
+  local playButton = gMenus.main.items[4]
+  if gMusicPlayer.isLoading then
+      playButton.title = 'Pause'
+  elseif not gMusicPlayer.isPlaying() then
+      playButton.title = 'Play'
+  else
+      playButton.title = 'Pause'
+  end
+  local view = playButton:getView()
+  view:setText(playButton.title)
+end
+
 gMenus = {
     main                = new(gMenu),
     playlists           = new(gMenu),
@@ -239,7 +253,7 @@ gMenus = {
     construct = function()
         -- Main menu
         gMenus.main.title = gWindow.title
-        local playItem = gMenuItem.new('Play / Pause')
+        local playItem = gMenuItem.new('Play')
         playItem.onClicked = onPlayClicked
         local loadPlaylistAction = function(item, playlistIndex)
             gMusicPlayer:loadPlaylist(playlistIndex)
@@ -260,7 +274,7 @@ gMenus = {
             playlistItem,
             loadPlaylistItem,
             gMenuItem.new('Playlists', gMenus.playlists),
-            playItem,
+            playItem, -- note hard-coded position in updatePlayButton()
             jumpToSongItem,
             aboutItem,
             --gMenuItem.new('Favorites'),
@@ -1124,6 +1138,7 @@ gMusicPlayer = {
         gMusicPlayer.setLoading(true)
         clearScreen()
         showMusicPlayerStatus()
+        updatePlayButton()
 
         -- Setting the current Audioclip breaks the in-game Music Player UI,
         -- MusicPlayer.PlaylistEntry will be set to -1, and then the next /
@@ -1173,6 +1188,7 @@ gMusicPlayer = {
         end
         clearScreen()
         showMusicPlayerStatus()
+        updatePlayButton()
     end,
 
     reloadCoroutine = function(args)
@@ -1182,12 +1198,14 @@ gMusicPlayer = {
         end
         clearScreen()
         showMusicPlayerStatus()
+        updatePlayButton()
     end,
 
     pausePlayCoroutine = function(args)
         gMusicPlayer.playCoroutine()
         clearScreen()
         showMusicPlayerStatus()
+        updatePlayButton()
     end,
 
     isPlaylistLoaded = function()
